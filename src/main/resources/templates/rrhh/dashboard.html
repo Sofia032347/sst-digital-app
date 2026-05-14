@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel RRHH - SST Digital</title>
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+</head>
+<body>
+
+<nav>
+    <strong>SST Digital - RRHH</strong>
+    <div style="margin-bottom: 20px;">
+        <a th:href="@{/actividades/pausa-activa}" class="btn" style="background: #e67e22; color: white; font-weight: bold; font-size: 16px; padding: 12px 20px;">
+            🧘‍♂️ Iniciar mi Pausa Activa (RRHH)
+        </a>
+    </div>
+    <div class="nav-links">
+        <a th:href="@{/usuarios}">Gestionar Usuarios</a>
+        <a th:href="@{/}">Cerrar Sesión</a>
+    </div>
+</nav>
+
+<div class="container">
+    <h2>Panel de Control de Pausas Activas</h2>
+
+    <div class="alert-section" th:if="${!empleadosPendientes.isEmpty()}">
+        <h3>⚠️ Alerta: Empleados pendientes hoy</h3>
+        <p>Los siguientes empleados aún no han registrado su pausa activa obligatoria:</p>
+        <ul>
+            <li th:each="p : ${empleadosPendientes}" th:text="${p.nombre + ' (' + p.departamento + ')'}"></li>
+        </ul>
+    </div>
+
+    <div class="toolbar">
+        <div class="filters">
+            <span>Filtrar por: </span>
+            <a th:href="@{/actividades/reporte(filtro='dia')}"
+               th:classappend="${filtroActual == 'dia' ? 'active' : ''}" class="btn btn-filter">Hoy</a>
+            <a th:href="@{/actividades/reporte(filtro='semana')}"
+               th:classappend="${filtroActual == 'semana' ? 'active' : ''}" class="btn btn-filter">Semana</a>
+            <a th:href="@{/actividades/reporte(filtro='mes')}"
+               th:classappend="${filtroActual == 'mes' ? 'active' : ''}" class="btn btn-filter">Mes</a>
+        </div>
+
+        <a th:href="@{/actividades/descargar}" class="btn btn-green">📊 Descargar Reporte CSV</a>
+    </div>
+
+    <table>
+        <thead>
+        <tr>
+            <th>Empleado</th>
+            <th>Departamento</th>
+            <th>Fecha y Hora</th>
+            <th>Duración</th>
+            <th>Estado</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="act : ${listaActividades}">
+            <td th:text="${act.usuario.nombre}"></td>
+            <td th:text="${act.usuario.departamento}"></td>
+            <td th:text="${#temporals.format(act.fecha, 'dd/MM/yyyy HH:mm')}"></td>
+            <td th:text="${act.duracionSegundos + ' seg'}"></td>
+            <td><span class="badge">Completado</span></td>
+        </tr>
+        <tr th:if="${listaActividades.isEmpty()}">
+            <td colspan="5" class="text-center">No hay registros para este periodo.</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>
