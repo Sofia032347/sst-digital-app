@@ -55,7 +55,7 @@ public class ActividadController {
     public String obtenerReporte(@RequestParam(value = "filtro", required = false) String filtro, Model model, HttpSession session) {
         // Security check
         if (session.getAttribute("usuarioLogueado") == null) return "redirect:/login";
-        
+
         LocalDateTime fin = LocalDateTime.now();
         LocalDateTime inicio;
         if (filtro == null) filtro = "dia";
@@ -89,7 +89,7 @@ public class ActividadController {
 
         return "rrhh/dashboard";
     }
-    
+
     // NEW METHOD: Employee Dashboard
     @GetMapping("/empleado/dashboard")
     public String empleadoDashboard(HttpSession session, Model model) {
@@ -97,17 +97,17 @@ public class ActividadController {
         if (logueado == null) {
             return "redirect:/login";
         }
-        
+
         // Get today's activities for this employee
         LocalDateTime inicio = LocalDateTime.now().with(LocalTime.MIN);
         List<Actividad> actividadesHoy = actividadRepository.findByUsuarioIdAndFechaBetween(
-            logueado.getId(), inicio, LocalDateTime.now());
-        
+                logueado.getId(), inicio, LocalDateTime.now());
+
         model.addAttribute("empleado", logueado);
         model.addAttribute("actividadesHoy", actividadesHoy);
         model.addAttribute("totalActividades", actividadesHoy.size());
         model.addAttribute("pausaRealizadaHoy", !actividadesHoy.isEmpty());
-        
+
         return "empleado/dashboard";
     }
 
@@ -125,35 +125,35 @@ public class ActividadController {
     }
 
     // --- DESCARGAR REPORTE CSV ---
-@GetMapping("/descargar")
-public void descargarCSV(HttpServletResponse response, HttpSession session) throws IOException {
-    // Security check
-    if (session.getAttribute("usuarioLogueado") == null) {
-        response.sendRedirect("/login");
-        return;
+    @GetMapping("/descargar")
+    public void descargarCSV(HttpServletResponse response, HttpSession session) throws IOException {
+        // Security check
+        if (session.getAttribute("usuarioLogueado") == null) {
+            response.sendRedirect("/login");
+            return;
+        }
+
+        response.setContentType("text/csv");
+        response.setHeader("Content-Disposition", "attachment; filename=reporte_pausas.csv");
+
+        List<Actividad> todas = actividadRepository.findAll();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("ID,Empleado,Departamento,Fecha,Duracion(Seg),Ejercicios,ValidadoIA\n");
+
+        // Fixed: changed from "toutes" to "todas"
+        for (Actividad a : todas) {
+            sb.append(a.getId()).append(",")
+                    .append(a.getUsuario().getNombre()).append(",")
+                    .append(a.getUsuario().getDepartamento()).append(",")
+                    .append(a.getFecha()).append(",")
+                    .append(a.getDuracionSegundos() != null ? a.getDuracionSegundos() : 0).append(",")
+                    .append(a.getEjerciciosCompletados() != null ? a.getEjerciciosCompletados() : 0).append(",")
+                    .append(a.getValidadoIA() != null ? a.getValidadoIA() : false).append("\n");
+        }
+
+        response.getWriter().write(sb.toString());
     }
-    
-    response.setContentType("text/csv");
-    response.setHeader("Content-Disposition", "attachment; filename=reporte_pausas.csv");
-
-    List<Actividad> todas = actividadRepository.findAll();
-
-    StringBuilder sb = new StringBuilder();
-    sb.append("ID,Empleado,Departamento,Fecha,Duracion(Seg),Ejercicios,ValidadoIA\n");
-
-    // Fixed: changed from "toutes" to "todas"
-    for (Actividad a : todas) {
-        sb.append(a.getId()).append(",")
-                .append(a.getUsuario().getNombre()).append(",")
-                .append(a.getUsuario().getDepartamento()).append(",")
-                .append(a.getFecha()).append(",")
-                .append(a.getDuracionSegundos() != null ? a.getDuracionSegundos() : 0).append(",")
-                .append(a.getEjerciciosCompletados() != null ? a.getEjerciciosCompletados() : 0).append(",")
-                .append(a.getValidadoIA() != null ? a.getValidadoIA() : false).append("\n");
-    }
-
-    response.getWriter().write(sb.toString());
-}
 
     @GetMapping("/pausa-activa")
     public String mostrarPausaActiva(HttpSession session, Model model) {
@@ -165,7 +165,7 @@ public void descargarCSV(HttpServletResponse response, HttpSession session) thro
         model.addAttribute("empleado", logueado);
         return "empleado/pausa-activa";
     }
-    
+
 
     @GetMapping("/finalizar-pausa")
     public String finalizarPausa(HttpSession session) {

@@ -7,13 +7,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 
 @Controller
 public class LogoutController {
-    
+
     @PostMapping("/logout")
     public String logout(HttpSession session) {
         session.invalidate();
         return "redirect:/login";
     }
-    
+
     @GetMapping("/")
     public String home(HttpSession session) {
         if (session.getAttribute("usuarioLogueado") != null) {
