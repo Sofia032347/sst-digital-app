@@ -28,27 +28,40 @@ public class ActividadController {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
-    @GetMapping("/dashboard")
+    @GetMapping("/rrhh")
     public String mostrarDashboard(@RequestParam(required = false) String filtro, Model model, HttpSession session) {
-        // 1. Seguridad: Si no hay sesión, al login
+        // 1. Seguridad
         if (session.getAttribute("usuarioLogueado") == null) return "redirect:/login";
 
-        // 2. Filtro de tiempo (Hoy por defecto)
-        LocalDateTime inicio = LocalDateTime.now().with(LocalTime.MIN);
-        if ("semana".equals(filtro)) inicio = LocalDateTime.now().minusWeeks(1);
-        if ("mes".equals(filtro)) inicio = LocalDateTime.now().minusMonths(1);
+        // 2. Definir los tiempos base
+        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime inicioHoy = ahora.with(LocalTime.MIN);
 
-        // 3. Obtener actividades para la tabla
-        List<Actividad> actividades = actividadRepository.findByFechaBetween(inicio, LocalDateTime.now());
-        model.addAttribute("listaActividades", actividades);
+        // 3. Resolver el filtro para la TABLA
+        LocalDateTime inicioTabla;
+        String filtroReal = (filtro != null) ? filtro : "dia";
 
-        // 4. LÓGICA DE ALERTAS: ¿Quién falta hoy?
-        List<Usuario> pendientes = obtenerPendientesHoy(actividades);
+        if ("semana".equals(filtroReal)) {
+            inicioTabla = ahora.minusWeeks(1);
+        } else if ("mes".equals(filtroReal)) {
+            inicioTabla = ahora.minusMonths(1);
+        } else {
+            inicioTabla = inicioHoy; // Por defecto: Hoy
+        }
+
+        // Buscar actividades para la TABLA usando el filtro
+        List<Actividad> actividadesTabla = actividadRepository.findByFechaBetween(inicioTabla, ahora);
+
+        // 4. LÓGICA DE ALERTAS: Siempre debe buscar usando "inicioHoy", sin importar el filtro de la tabla
+        List<Actividad> actividadesEstrictamenteHoy = actividadRepository.findByFechaBetween(inicioHoy, ahora);
+        List<Usuario> pendientes = obtenerPendientesHoy(actividadesEstrictamenteHoy);
+
+        // 5. Enviar a la vista
+        model.addAttribute("listaActividades", actividadesTabla);
         model.addAttribute("empleadosPendientes", pendientes);
+        model.addAttribute("filtroActual", filtroReal);
 
-        model.addAttribute("filtroActual", filtro != null ? filtro : "dia");
-
-        return "rrhh/dashboard";
+        return "rrhh/rrhh";
     }
 
     @GetMapping("/reporte")
@@ -87,12 +100,13 @@ public class ActividadController {
         model.addAttribute("empleadosPendientes", pendientes);
         model.addAttribute("filtroActual", filtro);
 
-        return "rrhh/dashboard";
+        return "rrhh/rrhh";
     }
 
     // NEW METHOD: Employee Dashboard
-    @GetMapping("/empleado/dashboard")
-    public String empleadoDashboard(HttpSession session, Model model) {
+    @GetMapping("/empleado")
+    public String
+    Dashboard(HttpSession session, Model model) {
         Usuario logueado = (Usuario) session.getAttribute("usuarioLogueado");
         if (logueado == null) {
             return "redirect:/login";
@@ -108,7 +122,7 @@ public class ActividadController {
         model.addAttribute("totalActividades", actividadesHoy.size());
         model.addAttribute("pausaRealizadaHoy", !actividadesHoy.isEmpty());
 
-        return "empleado/dashboard";
+        return "empleado/empleado";
     }
 
     private List<Usuario> obtenerPendientesHoy(List<Actividad> actividadesDeHoy) {
@@ -163,7 +177,7 @@ public class ActividadController {
         }
 
         model.addAttribute("empleado", logueado);
-        return "empleado/pausa-activa";
+        return "pausa-activa";
     }
 
 
@@ -185,9 +199,9 @@ public class ActividadController {
 
         // Redirigir según el rol
         if ("RRHH".equals(logueado.getRol().getNombre())) {
-            return "redirect:/actividades/dashboard";
+            return "redirect:/actividades/rrhh";
         } else {
-            return "redirect:/actividades/empleado/dashboard";
+            return "redirect:/actividades/empleado";
         }
     }
 }

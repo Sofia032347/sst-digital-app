@@ -40,9 +40,9 @@ public class LoginController {
             session.setAttribute("usuarioLogueado", usuarioLogueado);
 
             if (usuarioLogueado.getRol().getNombre().equals("RRHH")) {
-                return "redirect:/actividades/dashboard";
+                return "redirect:/actividades/rrhh";
             } else {
-                return "redirect:/actividades/pausa-activa";
+                return "redirect:/actividades/empleado";
             }
 
         } else {

@@ -3,20 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <title>Panel RRHH - SST Digital</title>
-    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <link rel="stylesheet" th:href="@{/css/rrhh.css}">
 </head>
 <body>
 
 <nav>
     <strong>SST Digital - RRHH</strong>
-    <div style="margin-bottom: 20px;">
-        <a th:href="@{/actividades/pausa-activa}" class="btn" style="background: #e67e22; color: white; font-weight: bold; font-size: 16px; padding: 12px 20px;">
+
+    <div class="action-container">
+        <a th:href="@{/actividades/pausa-activa}" class="btn btn-pausa">
             🧘‍♂️ Iniciar mi Pausa Activa (RRHH)
         </a>
     </div>
+
     <div class="nav-links">
         <a th:href="@{/usuarios}">Gestionar Usuarios</a>
-        <a th:href="@{/}">Cerrar Sesión</a>
+        <a th:href="@{/login}" class="btn-logout">Cerrar Sesión</a>
     </div>
 </nav>
 
@@ -34,14 +36,13 @@
     <div class="toolbar">
         <div class="filters">
             <span>Filtrar por: </span>
-            <a th:href="@{/actividades/reporte(filtro='dia')}"
+            <a th:href="@{/actividades/rrhh(filtro='dia')}"
                th:classappend="${filtroActual == 'dia' ? 'active' : ''}" class="btn btn-filter">Hoy</a>
-            <a th:href="@{/actividades/reporte(filtro='semana')}"
+            <a th:href="@{/actividades/rrhh(filtro='semana')}"
                th:classappend="${filtroActual == 'semana' ? 'active' : ''}" class="btn btn-filter">Semana</a>
-            <a th:href="@{/actividades/reporte(filtro='mes')}"
+            <a th:href="@{/actividades/rrhh(filtro='mes')}"
                th:classappend="${filtroActual == 'mes' ? 'active' : ''}" class="btn btn-filter">Mes</a>
         </div>
-
         <a th:href="@{/actividades/descargar}" class="btn btn-green">📊 Descargar Reporte CSV</a>
     </div>
 

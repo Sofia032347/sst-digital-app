@@ -9,10 +9,15 @@ body {
 nav {
     background: #185FA5;
     color: white;
-    padding: 1rem;
+    padding: 0.5rem 1rem; /* <-- CORREGIDO: Menos relleno vertical para hacer la barra más delgada */
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+/* Contenedor del botón en la barra de RRHH */
+.action-container {
+    margin: 0; /* <-- CORREGIDO: Quitamos el margen que empujaba la barra hacia abajo */
 }
 
 .nav-links a {
@@ -64,6 +69,21 @@ nav {
     display: inline-block;
 }
 
+/* Botón Naranja de Pausa Activa (RRHH) */
+.btn-pausa {
+    background-color: #e67e22;
+    color: white;
+    font-weight: bold;
+    font-size: 16px;
+    padding: 12px 20px;
+    transition: background-color 0.2s ease;
+}
+
+.btn-pausa:hover {
+    background-color: #d35400; /* Naranja más oscuro */
+    color: white;
+}
+
 .btn-blue {
     background: #185FA5;
     color: white;
@@ -91,6 +111,24 @@ nav {
 .btn-filter.active {
     background: #185FA5;
     color: white;
+}
+
+/* --- Botón de Cerrar Sesión --- */
+.btn-logout {
+    background-color: #dc3545; /* Fondo rojo */
+    color: #ffffff !important; /* Texto blanco (importante para sobreescribir el enlace de nav-links) */
+    padding: 8px 16px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    display: inline-block;
+    transition: background-color 0.3s ease;
+    margin-left: 15px; /* Mantiene la separación con los otros enlaces */
+}
+
+.btn-logout:hover {
+    background-color: #c82333; /* Rojo más oscuro al pasar el mouse */
+    text-decoration: none !important;
 }
 
 /* --- Tabla de Registros --- */
