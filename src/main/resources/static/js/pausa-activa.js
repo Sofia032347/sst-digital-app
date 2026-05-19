@@ -71,21 +71,21 @@ const rutina = [
         titulo: "9. Pantorrillas y Tobillos: Elevaciones y rotaciones",
         fases: [
             { instruccion: "De pie, ponte de puntillas lentamente y vuelve a bajar.", tiempo: 30, imagen: "/img/pantorrillas.jpeg" },
-            { instruccion: "Levanta el pie DERECHO: Haz giros con el tobillo hacia la DERECHA.", tiempo: 15 },
-            { instruccion: "Levanta el pie DERECHO: Haz giros con el tobillo hacia la IZQUIERDA.", tiempo: 15 },
-            { instruccion: "Levanta el pie IZQUIERDO: Haz giros con el tobillo hacia la DERECHA.", tiempo: 15 },
-            { instruccion: "Levanta el pie IZQUIERDO: Haz giros con el tobillo hacia la IZQUIERDA.", tiempo: 15 }
+            { instruccion: "Levanta el pie DERECHO: Haz giros con el tobillo hacia la DERECHA.", tiempo: 15, imagen: "/img/tobillos1.jpeg" },
+            { instruccion: "Levanta el pie DERECHO: Haz giros con el tobillo hacia la IZQUIERDA.", tiempo: 15, imagen: "/img/tobillos1.jpeg" },
+            { instruccion: "Levanta el pie IZQUIERDO: Haz giros con el tobillo hacia la DERECHA.", tiempo: 15, imagen: "/img/tobillos2.jpeg" },
+            { instruccion: "Levanta el pie IZQUIERDO: Haz giros con el tobillo hacia la IZQUIERDA.", tiempo: 15, imagen: "/img/tobillos2.jpeg" }
         ],
-        imagen: "/img/pantorrillas.jpeg"
+        imagen: "/img/tobillos2.jpeg"
     },
     {
         titulo: "10. Ojos y Mente: Relajación profunda",
         fases: [
             { instruccion: "Cubre tus ojos con las palmas de tus manos sin presionar para bloquear la luz.", tiempo: 20, imagen: "/img/ojos.jpeg" },
             { instruccion: "Masajea suavemente tus sienes (los lados de tu cabeza) haciendo círculos.", tiempo: 20, imagen: "/img/ojos.jpeg" },
-            { instruccion: "Baja las manos, relaja los hombros y respira profundo.", tiempo: 20 }
+            { instruccion: "Baja las manos, relaja los hombros y respira profundo.", tiempo: 20, imagen: "/img/relax.jpeg" }
         ],
-        imagen: "/img/jpeg"
+        imagen: "/img/relax.jpeg"
     }
 ];
 
