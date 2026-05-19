@@ -16,85 +16,59 @@ public class Actividad {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne // Muchas actividades pertenecen a un solo Usuario
+    @ManyToOne
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
-    private LocalDateTime fecha; // Para reportes por día/semana/mes
-    private Integer duracionSegundos; // Cuánto tiempo duró la pausa
-    private Integer ejerciciosCompletados; // Cantidad de ejercicios hechos
-    private Boolean validadoIA; // Si MediaPipe confirmó los movimientos
+    private LocalDateTime fecha;
+    private Integer duracionSegundos;
+    private Integer ejerciciosCompletados;
+    private Boolean validadoIA;
 
     @Column(name = "estado", nullable = false, length = 20)
-    private String estado; // EN_PROCESO, INCOMPLETA, COMPLETADA
+    private String estado;
 
     @PrePersist
     public void prePersist() {
-        this.fecha = LocalDateTime.now(); // Se asigna la fecha actual automáticamente
+        this.fecha = LocalDateTime.now();
 
-        // Por defecto, cuando se crea el registro en la BD, inicia "EN_PROCESO"
         if (this.estado == null) {
             this.estado = ESTADO_EN_PROCESO;
         }
     }
 
+    // Constructor vacío exigido por JPA
     public Actividad() {}
+
+    // NUEVO: Constructor con parámetros para facilitar el guardado en los controladores
+    public Actividad(Usuario usuario, Integer duracionSegundos, Integer ejerciciosCompletados, Boolean validadoIA, String estado) {
+        this.usuario = usuario;
+        this.duracionSegundos = duracionSegundos;
+        this.ejerciciosCompletados = ejerciciosCompletados;
+        this.validadoIA = validadoIA;
+        this.estado = estado;
+    }
 
     // --- GETTERS Y SETTERS ---
 
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public Usuario getUsuario() { return usuario; }
+    public void setUsuario(Usuario usuario) { this.usuario = usuario; }
 
-    public Usuario getUsuario() {
-        return usuario;
-    }
+    public LocalDateTime getFecha() { return fecha; }
+    public void setFecha(LocalDateTime fecha) { this.fecha = fecha; }
 
-    public void setUsuario(Usuario usuario) {
-        this.usuario = usuario;
-    }
+    public Integer getDuracionSegundos() { return duracionSegundos; }
+    public void setDuracionSegundos(Integer duracionSegundos) { this.duracionSegundos = duracionSegundos; }
 
-    public LocalDateTime getFecha() {
-        return fecha;
-    }
+    public Integer getEjerciciosCompletados() { return ejerciciosCompletados; }
+    public void setEjerciciosCompletados(Integer ejerciciosCompletados) { this.ejerciciosCompletados = ejerciciosCompletados; }
 
-    public void setFecha(LocalDateTime fecha) {
-        this.fecha = fecha;
-    }
+    public Boolean getValidadoIA() { return validadoIA; }
+    public void setValidadoIA(Boolean validadoIA) { this.validadoIA = validadoIA; }
 
-    public Integer getDuracionSegundos() {
-        return duracionSegundos;
-    }
-
-    public void setDuracionSegundos(Integer duracionSegundos) {
-        this.duracionSegundos = duracionSegundos;
-    }
-
-    public Integer getEjerciciosCompletados() {
-        return ejerciciosCompletados;
-    }
-
-    public void setEjerciciosCompletados(Integer ejerciciosCompletados) {
-        this.ejerciciosCompletados = ejerciciosCompletados;
-    }
-
-    public Boolean getValidadoIA() {
-        return validadoIA;
-    }
-
-    public void setValidadoIA(Boolean validadoIA) {
-        this.validadoIA = validadoIA;
-    }
-
-    public String getEstado() {
-        return estado;
-    }
-
-    public void setEstado(String estado) {
-        this.estado = estado;
-    }
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) { this.estado = estado; }
 }

@@ -165,3 +165,19 @@ th {
     color: #155724;
     font-weight: bold;
 }
+
+/* --- NUEVOS ESTILOS PARA ESTADOS DE PAUSA (Añadidos sin modificar lo anterior) --- */
+.badge.bg-warning {
+    background-color: #ffc107;
+    color: #212529; /* text-dark */
+}
+
+.badge.bg-success {
+    background-color: #198754;
+    color: #ffffff;
+}
+
+.badge.bg-danger {
+    background-color: #dc3545;
+    color: #ffffff;
+}

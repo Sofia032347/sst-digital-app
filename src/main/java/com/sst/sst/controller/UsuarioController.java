@@ -3,6 +3,7 @@ package com.sst.sst.controller;
 import com.sst.sst.model.Usuario;
 import com.sst.sst.repository.UsuarioRepository;
 import com.sst.sst.repository.RolRepository;
+import jakarta.servlet.http.HttpSession; // <-- IMPORTANTE: Importación de la sesión
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -21,32 +22,42 @@ public class UsuarioController {
     private RolRepository rolRepository;
 
     @GetMapping
-    public String listarUsuarios(Model model) {
+    public String listarUsuarios(Model model, HttpSession session) {
+        // --- SEGURIDAD ---
+        if (session.getAttribute("usuarioLogueado") == null) return "redirect:/login";
+
         model.addAttribute("listaUsuarios", usuarioRepository.findAll());
         model.addAttribute("nuevoUsuario", new Usuario());
         model.addAttribute("listaRoles", rolRepository.findAll());
 
-        // Aquí SÍ va el usuario vacío para que no falle la vista principal
         model.addAttribute("usuarioAEditar", new Usuario());
 
-        // CORREGIDO: Se quitó el "/" del inicio
         return "rrhh/usuarios/usuario";
     }
 
     @PostMapping("/guardar")
-    public String guardarUsuario(@ModelAttribute("nuevoUsuario") Usuario usuario) {
+    public String guardarUsuario(@ModelAttribute("nuevoUsuario") Usuario usuario, HttpSession session) {
+        // --- SEGURIDAD ---
+        if (session.getAttribute("usuarioLogueado") == null) return "redirect:/login";
+
         usuarioRepository.save(usuario);
         return "redirect:/usuarios";
     }
 
     @GetMapping("/eliminar/{id}")
-    public String eliminarUsuario(@PathVariable("id") Long id) {
+    public String eliminarUsuario(@PathVariable("id") Long id, HttpSession session) {
+        // --- SEGURIDAD ---
+        if (session.getAttribute("usuarioLogueado") == null) return "redirect:/login";
+
         usuarioRepository.deleteById(id);
         return "redirect:/usuarios";
     }
 
     @GetMapping("/editar/{id}")
-    public String mostrarFormularioDeEditar(@PathVariable("id") Long id, Model model) {
+    public String mostrarFormularioDeEditar(@PathVariable("id") Long id, Model model, HttpSession session) {
+        // --- SEGURIDAD ---
+        if (session.getAttribute("usuarioLogueado") == null) return "redirect:/login";
+
         // 1. Buscamos al usuario real
         Usuario usuario = usuarioRepository.findById(id).orElse(null);
 
@@ -61,7 +72,9 @@ public class UsuarioController {
     }
 
     @PostMapping("/actualizar/{id}")
-    public String actualizarUsuario(@PathVariable("id") Long id, @ModelAttribute("usuarioAEditar") Usuario usuarioModificado) {
+    public String actualizarUsuario(@PathVariable("id") Long id, @ModelAttribute("usuarioAEditar") Usuario usuarioModificado, HttpSession session) {
+        // --- SEGURIDAD ---
+        if (session.getAttribute("usuarioLogueado") == null) return "redirect:/login";
 
         Usuario usuarioExistente = usuarioRepository.findById(id).orElse(null);
 

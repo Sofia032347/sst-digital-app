@@ -8,15 +8,15 @@ const rutina = [
             { instruccion: "Lleva la barbilla al PECHO por 15 segundos.", tiempo: 15, imagen: "/img/cuello2.jpeg" },
             { instruccion: "Mira hacia el TECHO por otros 15 segundos.", tiempo: 15, imagen: "/img/cuello2.jpeg" }
         ],
-        imagen: "/img/cuello1.jpeg"
+        imagen: "/img/cuello2.jpeg"
     },
     {
         titulo: "2. Hombros: Círculos liberadores",
         fases: [
             { instruccion: "Con los brazos sueltos, haz círculos amplios con los hombros hacia ATRÁS.", tiempo: 30, imagen: "/img/hombros1.jpeg" },
-            { instruccion: "Cambia la dirección y haz círculos con los hombros hacia ADELANTE.", tiempo: 30, imagen: "/img/hombros2.jpeg" }
+            { instruccion: "Cambia la dirección y haz círculos con los hombros hacia ADELANTE.", tiempo: 30, imagen: "/img/hombros2.png" }
         ],
-        imagen: "/img/hombros1.jpeg"
+        imagen: "/img/hombros2.jpeg"
     },
     {
         titulo: "3. Hombros y Brazos: Estiramiento de tríceps",
@@ -31,59 +31,61 @@ const rutina = [
         fases: [
             { instruccion: "Entrelaza manos al frente, palmas hacia afuera, y empuja hacia adelante encorvando ligeramente la espalda alta.", tiempo: 30 }
         ],
-        imagen: "/img/espalda2.jpeg"
+        imagen: "/img/espalda.jpeg"
     },
     {
         titulo: "5. Muñecas y Antebrazos: Flexión y extensión",
         fases: [
-            { instruccion: "Brazo DERECHO ESTIRADO al frente: Tira suavemente de los dedos hacia ABAJO con la mano izquierda.", tiempo: 15, imagen: "/img/brazoderecho1.jpeg" },
+            { instruccion: "Brazo DERECHO ESTIRADO al frente: Tira suavemente de los dedos hacia ABAJO con la mano izquierda.", tiempo: 15, imagen: "/img/brazoderecho1.png" },
             { instruccion: "Brazo DERECHO ESTIRADO al frente: Apunta los dedos hacia ARRIBA y empújalos hacia ti.", tiempo: 15, imagen: "/img/brazoderecho2.jpeg"},
-            { instruccion: "Brazo IZQUIERDO ESTIRADO al frente: Tira suavemente de los dedos hacia ABAJO con la mano derecha.", tiempo: 15, imagen: "/img/brazoizquierdo1.jpeg" },
+            { instruccion: "Brazo IZQUIERDO ESTIRADO al frente: Tira suavemente de los dedos hacia ABAJO con la mano derecha.", tiempo: 15, imagen: "/img/brazoizquierdo1.png" },
             { instruccion: "Brazo IZQUIERDO ESTIRADO al frente: Apunta los dedos hacia ARRIBA y empújalos hacia ti.", tiempo: 15, imagen: "/img/brazoizquierdo2.jpeg"}
         ],
-        imagen: "/img/.jpeg"
+        imagen: "/img/brazoizquierdo2.png"
     },
     {
         titulo: "6. Tronco: Giro espinal",
         fases: [
-            { instruccion: "Sentado, gira el torso a la DERECHA y toca tu hombro derecho con la mano izquierda.", tiempo: 30 },
-            { instruccion: "Gira el torso a la IZQUIERDA y toca tu hombro izquierdo con la mano derecha.", tiempo: 30 }
+            { instruccion: "Sentado, gira el torso a la DERECHA y pon las manos en el respaldo de la silla.", tiempo: 30, imagen: "/img/tronco1.jpeg" },
+            { instruccion: "Gira el torso a la IZQUIERDA y pon las manos en el respaldo de la silla.", tiempo: 30, imagen: "/img/tronco2.jpeg" }
         ],
-        imagen: "/img/.jpeg"
+        imagen: "/img/tronco2.jpeg"
     },
     {
         titulo: "7. Espalda Baja: Estiramiento lateral",
         fases: [
-            { instruccion: "Levanta el brazo DERECHO por encima de la cabeza y flexiona el tronco hacia el lado izquierdo suavemente.", tiempo: 30 },
-            { instruccion: "Levanta el brazo IZQUIERDO por encima de la cabeza y flexiona el tronco hacia el lado derecho suavemente.", tiempo: 30 }
+            { instruccion: "Levanta el brazo DERECHO por encima de la cabeza y flexiona el tronco hacia el lado izquierdo suavemente.", tiempo: 30, imagen: "/img/lateral1.jpeg" },
+            { instruccion: "Levanta el brazo IZQUIERDO por encima de la cabeza y flexiona el tronco hacia el lado derecho suavemente.", tiempo: 30, imagen: "/img/lateral2.jpeg" }
         ],
-        imagen: "/img/.jpeg"
+        imagen: "/img/lateral2.jpeg"
     },
     {
         titulo: "8. Piernas: Estiramiento de Cuádriceps",
         fases: [
-            { instruccion: "De pie, dobla la rodilla DERECHA llevando el talón al glúteo. Mantén el equilibrio.", tiempo: 30 },
-            { instruccion: "De pie, dobla la rodilla IZQUIERDA llevando el talón al glúteo. Mantén el equilibrio.", tiempo: 30 }
+            { instruccion: "De pie, dobla la rodilla DERECHA llevando el talón al glúteo. Mantén el equilibrio.", tiempo: 30, imagen: "/img/cuadricep1.jpeg" },
+            { instruccion: "De pie, dobla la rodilla IZQUIERDA llevando el talón al glúteo. Mantén el equilibrio.", tiempo: 30, imagen: "/img/cuadricep2.jpeg" }
         ],
-        imagen: "/img/.jpeg"
+        imagen: "/img/cuadricep2.jpeg"
     },
     {
         titulo: "9. Pantorrillas y Tobillos: Elevaciones y rotaciones",
         fases: [
-            { instruccion: "De pie, ponte de puntillas lentamente y vuelve a bajar (repite varias veces).", tiempo: 30 },
-            { instruccion: "Levanta el pie DERECHO del suelo: Haz giros con el tobillo.", tiempo: 15 },
-            { instruccion: "Levanta el pie IZQUIERDO del suelo: Haz giros con el tobillo.", tiempo: 15}
+            { instruccion: "De pie, ponte de puntillas lentamente y vuelve a bajar.", tiempo: 30, imagen: "/img/pantorrillas.jpeg" },
+            { instruccion: "Levanta el pie DERECHO: Haz giros con el tobillo hacia la DERECHA.", tiempo: 15 },
+            { instruccion: "Levanta el pie DERECHO: Haz giros con el tobillo hacia la IZQUIERDA.", tiempo: 15 },
+            { instruccion: "Levanta el pie IZQUIERDO: Haz giros con el tobillo hacia la DERECHA.", tiempo: 15 },
+            { instruccion: "Levanta el pie IZQUIERDO: Haz giros con el tobillo hacia la IZQUIERDA.", tiempo: 15 }
         ],
-        imagen: "/img/.jpeg"
+        imagen: "/img/pantorrillas.jpeg"
     },
     {
         titulo: "10. Ojos y Mente: Relajación profunda",
         fases: [
-            { instruccion: "Cubre tus ojos con las palmas de tus manos sin presionar para bloquear la luz.", tiempo: 20 },
-            { instruccion: "Masajea suavemente tus sienes (los lados de tu cabeza) haciendo círculos.", tiempo: 20 },
+            { instruccion: "Cubre tus ojos con las palmas de tus manos sin presionar para bloquear la luz.", tiempo: 20, imagen: "/img/ojos.jpeg" },
+            { instruccion: "Masajea suavemente tus sienes (los lados de tu cabeza) haciendo círculos.", tiempo: 20, imagen: "/img/ojos.jpeg" },
             { instruccion: "Baja las manos, relaja los hombros y respira profundo.", tiempo: 20 }
         ],
-        imagen: "/img/.jpeg"
+        imagen: "/img/jpeg"
     }
 ];
 
@@ -92,6 +94,7 @@ let indiceEjercicioActual = 0;
 let indiceFaseActual = 0;
 let tiempoRestanteFase = 0;
 let ejercicioActivo = false;
+let estaPausado = false;
 let tiempoUltimoFrame = Date.now();
 
 let ultimaPosicionNariz = { x: 0, y: 0 };
@@ -101,8 +104,7 @@ const HISTORIAL_MAX = 45;
 let historialHombros = [];
 let historialCodosY = [];
 
-// --- CONFIGURACIÓN DEL RECORDATORIO (NUEVO) ---
-// 5 minutos para simulación (En producción cambiar a: 2 * 60 * 60 * 1000)
+// --- CONFIGURACIÓN DEL RECORDATORIO ---
 const TIEMPO_RECORDATORIO = 5 * 60 * 1000;
 
 const video = document.querySelector("#videoElement");
@@ -112,6 +114,8 @@ const aiStatus = document.getElementById("aiStatus");
 const timerDisplay = document.getElementById("timer");
 const btnStart = document.getElementById("btnStart");
 const btnNext = document.getElementById("btnNext");
+const btnPausar = document.getElementById("btnPausar");
+const btnCancelar = document.getElementById("btnCancelar");
 const exerciseTitle = document.getElementById("exerciseTitle");
 const exerciseDesc = document.getElementById("exerciseDesc");
 const exerciseImage = document.getElementById("exerciseImage");
@@ -123,10 +127,9 @@ pose.onResults(evaluarPosturaYDibujar);
 
 const camera = new Camera(video, { onFrame: async () => { await pose.send({ image: video }); }, width: 640, height: 480 });
 
-// --- LÓGICA DE RECORDATORIOS (NUEVO) ---
+// --- LÓGICA DE RECORDATORIOS ---
 function iniciarTemporizadorRecordatorio() {
     setInterval(() => {
-        // Solo envía la alerta si el usuario NO está ejecutando la rutina actualmente
         if (!ejercicioActivo) {
             enviarAlertaPausaActiva();
         }
@@ -134,30 +137,25 @@ function iniciarTemporizadorRecordatorio() {
 }
 
 function enviarAlertaPausaActiva() {
-    // Intentar reproducir sonido de atención
     try {
         new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3').play();
     } catch(e){}
 
-    // Si hay permisos de notificación del sistema, enviamos un globo flotante
     if (Notification.permission === "granted") {
         new Notification("🕒 ¡Hora de tu Pausa Activa!", {
             body: "Llevas mucho tiempo trabajando. Dedica unos minutos a estirar tu cuerpo y descansar la vista.",
             icon: "/img/cuello1.jpeg"
         });
     } else {
-        // Respaldo clásico si el navegador no soporta o rechazó las notificaciones directas
         alert("🕒 [RECORDATORIO] ¡Es momento de tu pausa activa de bienestar! Levántate de la silla y estira.");
     }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Solicitar permisos de notificación flotante al iniciar
     if (window.Notification && Notification.permission !== "granted" && Notification.permission !== "denied") {
         Notification.requestPermission();
     }
 
-    // Arrancar el reloj de fondo de 5 minutos
     iniciarTemporizadorRecordatorio();
 
     camera.start().then(() => {
@@ -185,8 +183,10 @@ function evaluarPosturaYDibujar(results) {
     }
 
     if (!results.poseLandmarks) {
-        aiStatus.className = "badge bg-danger text-white fs-5 p-2 shadow-sm";
-        aiStatus.innerText = "❌ No te veo en cámara. Ubícate mejor.";
+        if (!estaPausado) {
+            aiStatus.className = "badge bg-danger text-white fs-5 p-2 shadow-sm";
+            aiStatus.innerHTML = '<i class="bi bi-camera-video-off-fill"></i> No te veo en cámara. Ubícate mejor.';
+        }
         canvasCtx.restore();
         return;
     }
@@ -194,6 +194,10 @@ function evaluarPosturaYDibujar(results) {
     drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#00FF00', lineWidth: 4 });
     drawLandmarks(canvasCtx, results.poseLandmarks, { color: '#FF0000', lineWidth: 2, radius: 3 });
     canvasCtx.restore();
+
+    if (estaPausado) {
+        return;
+    }
 
     actualizarHistoriales(results.poseLandmarks);
 
@@ -205,7 +209,7 @@ function evaluarPosturaYDibujar(results) {
 
         if (posturaCorrecta) {
             aiStatus.className = "badge bg-success text-white fs-5 p-2 shadow-sm";
-            aiStatus.innerText = "✅ Excelente, mantén la postura.";
+            aiStatus.innerHTML = '<i class="bi bi-check-circle-fill"></i> Excelente, mantén la postura.';
             tiempoRestanteFase--;
             if (timerDisplay) timerDisplay.innerText = tiempoRestanteFase + "s";
 
@@ -214,7 +218,7 @@ function evaluarPosturaYDibujar(results) {
             }
         } else {
             aiStatus.className = "badge bg-warning text-dark fs-5 p-2 shadow-sm";
-            aiStatus.innerText = "⚠️ Postura incorrecta o incompleta. Tiempo Pausado.";
+            aiStatus.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> Postura incorrecta o incompleta. Tiempo Pausado.';
         }
     }
 }
@@ -383,7 +387,7 @@ function validarMovimientoEspecifico(puntos) {
             const rangoY = Math.max(...yTobillosRecientes) - Math.min(...yTobillosRecientes);
             return rangoY > 0.015;
         }
-        if (indiceFaseActual === 1) {
+        if (indiceFaseActual === 1 || indiceFaseActual === 2) {
             const tobilloVisible = tobilloDerecho && tobilloDerecho.visibility > 0.4;
             if (!tobilloVisible) return false;
 
@@ -393,7 +397,7 @@ function validarMovimientoEspecifico(puntos) {
 
             return pieElevado && mov > 0.002;
         }
-        if (indiceFaseActual === 2) {
+        if (indiceFaseActual === 3 || indiceFaseActual === 4) {
             const tobilloVisible = tobilloIzquierdo && tobilloIzquierdo.visibility > 0.4;
             if (!tobilloVisible) return false;
 
@@ -406,18 +410,31 @@ function validarMovimientoEspecifico(puntos) {
     }
     else if (indiceEjercicioActual === 9) {
         if (indiceFaseActual === 0) {
+            // Tapar los ojos: manos juntas en el centro a la altura de la cara
             return Math.abs(munecaDerecha.y - nariz.y) < 0.15 &&
                 Math.abs(munecaIzquierda.y - nariz.y) < 0.15 &&
-                Math.abs(munecaDerecha.x - munecaIzquierda.x) < 0.22;
+                Math.abs(munecaDerecha.x - munecaIzquierda.x) < 0.20; // Manos muy juntas
         }
         if (indiceFaseActual === 1) {
-            return Math.abs(munecaDerecha.x - orejaDerecha.x) < 0.15 &&
-                Math.abs(munecaIzquierda.x - orejaIzquierda.x) < 0.15;
+            // Masajear sienes: manos a la altura de las orejas PERO separadas
+            const aLaAlturaDeOrejas = Math.abs(munecaDerecha.y - orejaDerecha.y) < 0.15 &&
+                Math.abs(munecaIzquierda.y - orejaIzquierda.y) < 0.15;
+
+            // La clave está aquí: obligamos a que haya una distancia mayor entre las muñecas
+            // para asegurar que están a los costados de la cabeza y no en el centro.
+            const manosSeparadas = Math.abs(munecaDerecha.x - munecaIzquierda.x) > 0.25;
+
+            return aLaAlturaDeOrejas && manosSeparadas;
         }
         if (indiceFaseActual === 2) {
+            // Bajar las manos y relajar
             const movimiento = Math.abs(nariz.x - ultimaPosicionNariz.x) + Math.abs(nariz.y - ultimaPosicionNariz.y);
             ultimaPosicionNariz = { x: nariz.x, y: nariz.y };
-            return munecaDerecha.y > hombroDerecho.y + 0.1 && movimiento < 0.010;
+
+            // Verificamos que bajó las manos por debajo de los hombros
+            return munecaDerecha.y > hombroDerecho.y + 0.1 &&
+                munecaIzquierda.y > hombroIzquierdo.y + 0.1 &&
+                movimiento < 0.010;
         }
     }
 
@@ -455,6 +472,8 @@ function avanzarFaseOEjercicio() {
 
 function iniciarTemporizador() {
     btnStart.disabled = true;
+    btnPausar.disabled = false;
+    btnCancelar.disabled = false;
 
     const ej = rutina[indiceEjercicioActual];
     const fase = ej.fases[indiceFaseActual];
@@ -474,27 +493,36 @@ function iniciarTemporizador() {
     if (timerDisplay) timerDisplay.innerText = tiempoRestanteFase + "s";
 
     ejercicioActivo = true;
+    estaPausado = false;
     tiempoUltimoFrame = Date.now();
     historialHombros = [];
     historialCodosY  = [];
 
     aiStatus.className = "badge bg-info text-dark fs-5 p-2 shadow-sm";
-    aiStatus.innerText = "🤖 Evaluando postura...";
+    aiStatus.innerHTML = '<i class="bi bi-robot"></i> Evaluando postura...';
+
+    if (indiceEjercicioActual === 0 && indiceFaseActual === 0) {
+        fetch('/actividades/iniciar-pausa', { method: 'POST' })
+            .then(res => res.json())
+            .then(id => console.log("Registro creado en la BD con ID: " + id))
+            .catch(err => console.error("Error al registrar inicio", err));
+    }
 }
 
-// Al finalizar se desactiva "ejercicioActivo" permitiendo que el recordatorio de 5 min vuelva a evaluar en el futuro
 function finalizarEjercicio() {
     ejercicioActivo = false;
     timerDisplay.innerText = "¡Listo!";
     exerciseDesc.innerText = "¡Excelente trabajo! Prepárate para el siguiente.";
     btnNext.disabled = false;
+    btnPausar.disabled = true;
+    btnCancelar.disabled = true;
     aiStatus.className = "badge bg-info text-dark fs-5 p-2 shadow-sm";
-    aiStatus.innerText = "Descansa un momento";
+    aiStatus.innerHTML = '<i class="bi bi-person-arms-up"></i> Descansa un momento';
 
     try { new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3').play(); } catch(e){}
 
     if (indiceEjercicioActual === rutina.length - 1) {
-        btnNext.innerText = "Finalizar Pausa Activa 🏁";
+        btnNext.innerHTML = 'Finalizar Pausa Activa <i class="bi bi-check-lg"></i>';
         btnNext.classList.replace("btn-outline-primary", "btn-primary");
     }
 }
@@ -531,8 +559,69 @@ function siguienteEjercicio() {
 
     document.getElementById("progresoTexto").innerText = `Ejercicio ${indiceEjercicioActual + 1} de ${rutina.length}`;
 
-    btnStart.disabled  = false;
-    btnNext.disabled   = true;
+    btnStart.disabled = false;
+    btnNext.disabled = true;
+    btnPausar.disabled = true;
+    btnCancelar.disabled = true;
     aiStatus.className = "badge bg-secondary text-white fs-5 p-2 shadow-sm";
-    aiStatus.innerText = "🤖 IA Esperando iniciar...";
+    aiStatus.innerHTML = '<i class="bi bi-hourglass-split"></i> IA Esperando iniciar...';
+}
+
+// --- 6. FUNCIONES DE PAUSAR Y CANCELAR CON MODAL (SWEETALERT2) ---
+function pausarEjercicio() {
+    if (!ejercicioActivo) return;
+
+    estaPausado = true;
+
+    Swal.fire({
+        title: 'Atención',
+        text: 'Las pausas activas han sido pausadas.',
+        icon: 'info',
+        showCancelButton: false,
+        confirmButtonColor: '#185FA5',
+        confirmButtonText: '▶ Reanudar',
+        allowOutsideClick: false,
+        allowEscapeKey: false
+    }).then((result) => {
+        if (result.isConfirmed) {
+            estaPausado = false;
+            tiempoUltimoFrame = Date.now();
+
+            if (aiStatus) {
+                aiStatus.className = "badge bg-info text-dark fs-5 p-2 shadow-sm";
+                aiStatus.innerHTML = '<i class="bi bi-play-circle-fill"></i> Reanudando...';
+            }
+        }
+    });
+}
+
+function cancelarEjercicio() {
+    estaPausado = true;
+
+    Swal.fire({
+        title: '¿Estás seguro?',
+        text: 'La pausa activa quedará registrada como Incompleta.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, cancelar',
+        cancelButtonText: 'Seguir con el ejercicio',
+        allowOutsideClick: false
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/actividades/cancelar-pausa?ejercicios=${indiceEjercicioActual}`, { method: 'POST' })
+                .then(() => {
+                    const btnVolver = document.querySelector('a.btn-outline-secondary');
+                    const urlVolver = btnVolver ? btnVolver.getAttribute('href') : '/actividades/empleado';
+                    window.location.href = urlVolver;
+                })
+                .catch(() => {
+                    window.location.href = '/actividades/empleado';
+                });
+        } else {
+            estaPausado = false;
+            tiempoUltimoFrame = Date.now();
+        }
+    });
 }
