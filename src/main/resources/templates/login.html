@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>SST Digital - Iniciar Sesión</title>
     <link th:href="@{/css/login.css}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
@@ -20,6 +21,13 @@
         <button type="submit">Ingresar</button>
 
         <div th:if="${error != null}" th:text="${error}" class="error-msg"></div>
+
+        <div class="back-link">
+            <a th:href="@{/}" class="btn-volver">
+                <i class="fas fa-arrow-left"></i> Volver al Inicio
+            </a>
+        </div>
+
     </form>
 </div>
 

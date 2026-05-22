@@ -62,3 +62,21 @@ button:hover {
     margin-top: 15px;
     font-size: 14px;
 }
+
+.back-link {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.btn-volver {
+    display: inline-block;
+    color: #6c757d; /* Un gris suave, ajústalo a tu paleta de colores */
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.3s ease;
+}
+
+.btn-volver:hover {
+    color: #3b82f6; /* El color azul que usamos en el Index */
+    text-decoration: underline;
+}
