@@ -2,80 +2,108 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel RRHH - SST Digital</title>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
     <link rel="stylesheet" th:href="@{/css/rrhh.css}">
 </head>
-<body>
+<body class="bg-light">
 
-<nav>
-    <strong>SST Digital - RRHH</strong>
+<nav class="navbar navbar-dark bg-primary mb-4 shadow-sm">
+    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+        <span class="navbar-brand mb-0 h1 fs-5 fs-md-4 text-center">SST Digital - RRHH</span>
 
-    <div class="action-container">
-        <a th:href="@{/actividades/pausa-activa}" class="btn btn-pausa">
-            <i class="bi bi-play-fill"></i> Iniciar mi Pausa Activa (RRHH)
-        </a>
-    </div>
+        <div class="d-grid gap-2 d-md-flex align-items-center w-100 w-md-auto">
+            <a th:href="@{/actividades/pausa-activa}" class="btn btn-warning btn-sm fw-bold shadow-sm">
+                <i class="bi bi-play-fill"></i> Mi Pausa Activa
+            </a>
+            <a th:href="@{/usuarios}" class="btn btn-light btn-sm shadow-sm">
+                <i class="bi bi-people-fill me-1"></i> Gestionar Usuarios
+            </a>
 
-    <div class="nav-links">
-        <a th:href="@{/usuarios}">Gestionar Usuarios</a>
-        <a th:href="@{/logout}" class="btn-logout">Cerrar Sesión</a>
+            <form th:action="@{/logout}" method="post" class="m-0">
+                <button type="submit" class="btn btn-danger btn-sm w-100 shadow-sm">Cerrar Sesión</button>
+            </form>
+        </div>
     </div>
 </nav>
 
-<div class="container">
-    <h2>Panel de Control de Pausas Activas</h2>
+<div class="container mb-5">
+    <h2 class="mb-4 text-center text-md-start text-primary fw-bold">Panel de Control de Pausas Activas</h2>
 
-    <div class="alert-section" th:if="${!empleadosPendientes.isEmpty()}">
-        <h3><i class="bi bi-exclamation-triangle-fill"></i> Alerta: Empleados pendientes hoy</h3>
-        <p>Los siguientes empleados aún no han registrado su pausa activa obligatoria:</p>
-        <ul>
-            <li th:each="p : ${empleadosPendientes}" th:text="${p.nombre + ' (' + p.departamento + ')'}"></li>
+    <div class="alert alert-warning shadow-sm border-warning rounded-3" th:if="${!empleadosPendientes.isEmpty()}">
+        <h5 class="alert-heading fw-bold">
+            <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i> Alerta: Empleados pendientes hoy
+        </h5>
+        <p class="mb-2">Los siguientes empleados aún no han registrado su pausa activa obligatoria:</p>
+        <ul class="mb-0">
+            <li th:each="p : ${empleadosPendientes}" class="fw-semibold">
+                <span th:text="${p.nombre}"></span>
+                <span class="text-muted fw-normal" th:text="'(' + ${p.departamento} + ')'"></span>
+            </li>
         </ul>
     </div>
 
-    <div class="toolbar">
-        <div class="filters">
-            <span>Filtrar por: </span>
-            <a th:href="@{/actividades/rrhh(filtro='dia')}"
-               th:classappend="${filtroActual == 'dia' ? 'active' : ''}" class="btn btn-filter">Hoy</a>
-            <a th:href="@{/actividades/rrhh(filtro='semana')}"
-               th:classappend="${filtroActual == 'semana' ? 'active' : ''}" class="btn btn-filter">Semana</a>
-            <a th:href="@{/actividades/rrhh(filtro='mes')}"
-               th:classappend="${filtroActual == 'mes' ? 'active' : ''}" class="btn btn-filter">Mes</a>
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4 p-3 bg-white rounded shadow-sm border">
+        <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-2">
+            <span class="fw-bold text-muted d-none d-sm-inline">Filtrar por: </span>
+
+            <div class="btn-group w-100 w-sm-auto shadow-sm" role="group">
+                <a th:href="@{/actividades/rrhh(filtro='dia')}"
+                   th:classappend="${filtroActual == 'dia' ? 'active' : ''}" class="btn btn-outline-primary">Hoy</a>
+                <a th:href="@{/actividades/rrhh(filtro='semana')}"
+                   th:classappend="${filtroActual == 'semana' ? 'active' : ''}" class="btn btn-outline-primary">Semana</a>
+                <a th:href="@{/actividades/rrhh(filtro='mes')}"
+                   th:classappend="${filtroActual == 'mes' ? 'active' : ''}" class="btn btn-outline-primary">Mes</a>
+            </div>
         </div>
-        <a th:href="@{/actividades/descargar}" class="btn btn-green"><i class="bi bi-file-earmark-arrow-down-fill"></i> Descargar Reporte CSV</a>
+
+        <a th:href="@{/actividades/descargar}" class="btn btn-success w-100 w-lg-auto shadow-sm">
+            <i class="bi bi-file-earmark-arrow-down-fill me-1"></i> Descargar Reporte CSV
+        </a>
     </div>
 
-    <table>
-        <thead>
-        <tr>
-            <th>Empleado</th>
-            <th>Departamento</th>
-            <th>Fecha y Hora</th>
-            <th>Duración</th>
-            <th>Estado</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="act : ${listaActividades}">
-            <td th:text="${act.usuario.nombre}"></td>
-            <td th:text="${act.usuario.departamento}"></td>
-            <td th:text="${#temporals.format(act.fecha, 'dd/MM/yyyy HH:mm')}"></td>
-            <td th:text="${act.duracionSegundos + ' seg'}"></td>
-            <td>
-                <span th:if="${act.estado == 'EN_PROCESO'}" class="badge bg-warning">En Proceso <i class="bi bi-hourglass-split"></i></span>
-                <span th:if="${act.estado == 'COMPLETADA'}" class="badge bg-success">Completada <i class="bi bi-check-lg"></i></span>
-                <span th:if="${act.estado == 'INCOMPLETA'}" class="badge bg-danger">Incompleta <i class="bi bi-x-lg"></i></span>
-            </td>
-        </tr>
-        <tr th:if="${listaActividades.isEmpty()}">
-            <td colspan="5" class="text-center">No hay registros para este periodo.</td>
-        </tr>
-        </tbody>
-    </table>
+    <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0">
+                    <thead class="table-dark">
+                    <tr>
+                        <th>Empleado</th>
+                        <th>Departamento</th>
+                        <th>Fecha y Hora</th>
+                        <th>Duración</th>
+                        <th>Estado</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="act : ${listaActividades}">
+                        <td th:text="${act.usuario.nombre}" class="fw-semibold"></td>
+                        <td th:text="${act.usuario.departamento}"></td>
+                        <td th:text="${#temporals.format(act.fecha, 'dd/MM/yyyy HH:mm')}"></td>
+                        <td th:text="${act.duracionSegundos + ' seg'}"></td>
+                        <td>
+                            <span th:if="${act.estado == 'EN_PROCESO'}" class="badge bg-warning text-dark py-2">En Proceso <i class="bi bi-hourglass-split"></i></span>
+                            <span th:if="${act.estado == 'COMPLETADA'}" class="badge bg-success py-2">Completada <i class="bi bi-check-lg"></i></span>
+                            <span th:if="${act.estado == 'INCOMPLETA'}" class="badge bg-danger py-2">Incompleta <i class="bi bi-x-lg"></i></span>
+                        </td>
+                    </tr>
+                    <tr th:if="${listaActividades.isEmpty()}">
+                        <td colspan="5" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                            No hay registros para este periodo.
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

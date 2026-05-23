@@ -11,6 +11,6 @@ public class LogoutController {
     public String cerrarSesion(HttpSession session) {
         session.invalidate();
 
-        return "redirect:/";
+        return "redirect:/index";
     }
 }

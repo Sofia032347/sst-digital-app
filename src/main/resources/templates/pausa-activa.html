@@ -13,64 +13,75 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
 </head>
-<body>
+<body class="bg-light">
 
-<nav class="navbar navbar-dark bg-primary mb-4">
-    <div class="container">
-        <span class="navbar-brand mb-0 h1">SST - Módulo de Salud</span>
-        <div class="d-flex align-items-center">
-            <span class="text-white me-3">Usuario: <strong th:text="${empleado.nombre}">Nombre</strong></span>
-            <form th:action="@{/logout}" method="post" class="m-0">
-                <button type="submit" class="btn btn-danger btn-sm">Cerrar Sesión</button>
+<nav class="navbar navbar-dark bg-primary mb-4 shadow-sm">
+    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+        <span class="navbar-brand mb-0 h1 fs-5 fs-md-4 text-center">SST - Módulo de Salud</span>
+        <div class="d-flex flex-column flex-sm-row align-items-center gap-3">
+            <span class="text-white text-center">Usuario: <strong th:text="${empleado.nombre}" class="text-warning">Nombre</strong></span>
+            <form th:action="@{/logout}" method="post" class="m-0 w-100 w-sm-auto">
+                <button type="submit" class="btn btn-danger btn-sm w-100">Cerrar Sesión</button>
             </form>
         </div>
     </div>
 </nav>
 
-<div class="container">
+<div class="container mb-5">
 
-    <a th:href="@{${empleado.rol.nombre == 'RRHH' ? '/actividades/rrhh' : '/actividades/empleado'}}"
-       class="btn btn-outline-secondary shadow-sm"><i class="bi bi-arrow-left"></i> Volver al Panel
-    </a>
+    <div class="mb-4">
+        <a th:href="@{${empleado.rol.nombre == 'RRHH' ? '/actividades/rrhh' : '/actividades/empleado'}}"
+           class="btn btn-outline-secondary shadow-sm d-block d-md-inline-block">
+            <i class="bi bi-arrow-left"></i> Volver al Panel
+        </a>
+    </div>
 
-    <div class="row align-items-stretch">
+    <div class="row align-items-stretch g-4">
 
-        <div class="col-lg-7">
-            <div class="camera-container">
-                <video id="videoElement" autoplay playsinline></video>
-                <canvas id="output_canvas" class="position-absolute top-0 start-0" style="width: 100%; height: 100%; pointer-events: none;"></canvas>
-                <div id="cameraStatus" class="position-absolute top-50 start-50 translate-middle text-white fw-bold">Iniciando cámara...</div>
+        <div class="col-12 col-lg-7">
+            <div class="camera-container position-relative overflow-hidden rounded shadow bg-dark">
+                <video id="videoElement" class="w-100 h-100 object-fit-cover" autoplay playsinline></video>
+                <canvas id="output_canvas" class="position-absolute top-0 start-0 w-100 h-100" style="pointer-events: none;"></canvas>
+                <div id="cameraStatus" class="position-absolute top-50 start-50 translate-middle text-white fw-bold text-center w-100 px-3">Iniciando cámara...</div>
             </div>
 
             <div class="mt-3 text-center">
-                <span class="badge bg-warning text-dark fs-5 p-2 shadow-sm" id="aiStatus"><i class="bi bi-robot"></i> IA Esperando iniciar...</span>
+                <span class="badge bg-warning text-dark fs-6 p-2 shadow-sm" id="aiStatus">
+                    <i class="bi bi-robot"></i> IA Esperando iniciar...
+                </span>
             </div>
 
-            <div class="progress mt-3" style="height: 10px;">
-                <div id="rutinaProgress" class="progress-bar bg-success" role="progressbar" style="width: 10%;" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="progress mt-3 shadow-sm" style="height: 12px;">
+                <div id="rutinaProgress" class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: 10%;" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
-            <p class="text-center text-muted small mt-1" id="progresoTexto">Preparación</p>
+            <p class="text-center text-muted fw-bold small mt-2" id="progresoTexto">Preparación</p>
         </div>
 
-        <div class="col-lg-5">
-            <div class="card exercise-card p-4 h-100">
+        <div class="col-12 col-lg-5">
+            <div class="card exercise-card p-3 p-md-4 h-100 shadow border-0 rounded-4">
                 <h4 id="exerciseTitle" class="text-primary fw-bold text-center">Preparación</h4>
 
                 <div class="my-3 text-center">
-                    <img src="/img/preparacion.png" id="exerciseImage" class="img-fluid rounded shadow-sm exercise-img" alt="Guía del Ejercicio">
+                    <img src="/img/preparacion.png" id="exerciseImage" class="img-fluid rounded shadow-sm exercise-img" alt="Guía del Ejercicio" style="max-height: 200px; object-fit: contain;">
                 </div>
 
-                <p id="exerciseDesc" class="text-muted fs-5 fw-semibold instruction-text text-center">
+                <p id="exerciseDesc" class="text-muted fs-6 fs-md-5 fw-semibold instruction-text text-center px-2">
                     Ubícate frente a la cámara, respira profundo y ajusta tu postura.
                 </p>
 
-                <div class="timer-display text-center" id="timer">--</div>
+                <div class="timer-display text-center display-4 fw-bold text-dark my-3" id="timer">--</div>
 
                 <div class="mt-auto">
-                    <button class="btn btn-success btn-lg w-100 mb-2" id="btnStart" onclick="iniciarTemporizador()"><i class="bi bi-play-fill"></i> EMPEZAR EJERCICIO</button>
-                    <button class="btn btn-outline-primary w-100 mb-3" id="btnNext" onclick="siguienteEjercicio()" disabled>Siguiente Ejercicio <i class="bi bi-arrow-right"></i></button>
+                    <button class="btn btn-success btn-lg w-100 mb-2 shadow" id="btnStart" onclick="iniciarTemporizador()">
+                        <i class="bi bi-play-fill"></i> EMPEZAR EJERCICIO
+                    </button>
 
-                    <hr class="text-muted my-2">
+                    <button class="btn btn-outline-primary w-100 mb-3" id="btnNext" onclick="siguienteEjercicio()" disabled>
+                        Siguiente Ejercicio <i class="bi bi-arrow-right"></i>
+                    </button>
+
+                    <hr class="text-muted my-3">
+
                     <div class="row g-2 mt-1">
                         <div class="col-6">
                             <button type="button" class="btn btn-warning w-100 fw-bold shadow-sm py-2" id="btnPausar" onclick="pausarEjercicio()" disabled>
@@ -79,7 +90,7 @@
                         </div>
 
                         <div class="col-6">
-                            <button type="button" class="btn btn-danger w-100 fw-bold shadow-sm py-2 d-flex align-items-center justify-content-center" id="btnCancelar" onclick="cancelarEjercicio()" disabled>
+                            <button type="button" class="btn btn-danger w-100 fw-bold shadow-sm py-2 d-flex align-items-center justify-content-center gap-1" id="btnCancelar" onclick="cancelarEjercicio()" disabled>
                                 <i class="bi bi-x-lg"></i> Cancelar
                             </button>
                         </div>
