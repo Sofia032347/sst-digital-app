@@ -134,16 +134,59 @@ public class ActividadController {
         Usuario logueado = (Usuario) session.getAttribute("usuarioLogueado");
         if (logueado == null) return "redirect:/login";
 
-        LocalDateTime inicio = LocalDateTime.now().with(LocalTime.MIN);
+        LocalDateTime inicio = LocalDate.now().atStartOfDay();
+        LocalDateTime fin = LocalDate.now().atTime(LocalTime.MAX);
+
         List<Actividad> actividadesHoy = actividadRepository.findByUsuarioIdAndFechaBetween(
-                logueado.getId(), inicio, LocalDateTime.now());
+                logueado.getId(), inicio, fin);
 
         model.addAttribute("empleado", logueado);
         model.addAttribute("actividadesHoy", actividadesHoy);
-        model.addAttribute("totalActividades", actividadesHoy.size());
-        model.addAttribute("pausaRealizadaHoy", !actividadesHoy.isEmpty());
+        model.addAttribute("pausaRealizadaHoy", actividadesHoy.stream().anyMatch(a -> "COMPLETADA".equals(a.getEstado())));
 
         return "empleado/empleado";
+    }
+
+    // --- NUEVO: ENDPOINT DE ESTADO PARA BLOQUEO DE BOTÓN ---
+    @GetMapping("/estado-boton")
+    @ResponseBody
+    public Map<String, Object> verificarEstadoBoton(HttpSession session) {
+        Usuario logueado = (Usuario) session.getAttribute("usuarioLogueado");
+        Map<String, Object> respuesta = new HashMap<>();
+
+        if (logueado == null) return respuesta;
+
+        LocalDateTime inicioHoy = LocalDate.now().atStartOfDay();
+        LocalDateTime finHoy = LocalDate.now().atTime(LocalTime.MAX);
+        LocalDateTime horaLogin = (LocalDateTime) session.getAttribute("horaInicioSesion");
+
+        // 1. Tiempo transcurrido (5 min)
+        long minutosTranscurridos = 0;
+        if (horaLogin != null) {
+            minutosTranscurridos = java.time.Duration.between(horaLogin, LocalDateTime.now()).toMinutes();
+        }
+
+        // 2. Buscar actividades de hoy
+        List<Actividad> actividadesHoy = actividadRepository.findByUsuarioIdAndFechaBetween(
+                logueado.getId(), inicioHoy, finHoy);
+
+        boolean yaCompleto = actividadesHoy.stream().anyMatch(a -> "COMPLETADA".equals(a.getEstado()));
+        boolean tieneIncompleta = actividadesHoy.stream().anyMatch(a -> "INCOMPLETA".equals(a.getEstado()));
+
+        String estado;
+        if (yaCompleto) {
+            estado = "BLOQUEADO_COMPLETO";
+        } else if (tieneIncompleta) {
+            estado = "REANUDAR";
+        } else if (minutosTranscurridos >= 5) {
+            estado = "DISPONIBLE";
+        } else {
+            estado = "ESPERANDO";
+            respuesta.put("faltan", 5 - minutosTranscurridos);
+        }
+
+        respuesta.put("estado", estado);
+        return respuesta;
     }
 
     // --- LÓGICA DE PENDIENTES ---

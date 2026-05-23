@@ -1,15 +1,43 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Monitor de RRHH iniciado...");
 
-    // --- 1. ADVERTENCIA SALUD RRHH (5 min desde login) ---
-    const horaLoginStr = document.getElementById('horaLoginInput').value;
+    const btn = document.getElementById('btnAccionPausa');
 
+    // --- 1. FUNCIÓN PARA CONTROLAR EL ESTADO DEL BOTÓN PROPIO ---
+    async function actualizarBotonRRHH() {
+        try {
+            const response = await fetch('/actividades/estado-boton');
+            const data = await response.json();
+
+            if (data.estado === "BLOQUEADO_COMPLETO") {
+                btn.className = "btn btn-secondary disabled";
+                btn.innerHTML = '<i class="bi bi-check-circle"></i> Pausa Cumplida';
+                btn.style.pointerEvents = "none";
+            } else if (data.estado === "REANUDAR") {
+                btn.className = "btn btn-warning shadow-sm";
+                btn.innerHTML = '<i class="bi bi-play-circle"></i> Reanudar Pausa';
+                btn.style.pointerEvents = "auto";
+            } else if (data.estado === "DISPONIBLE") {
+                btn.className = "btn btn-pausa"; // Clase original de tu CSS
+                btn.innerHTML = '<i class="bi bi-play-fill"></i> Iniciar mi Pausa Activa';
+                btn.style.pointerEvents = "auto";
+            } else if (data.estado === "ESPERANDO") {
+                btn.className = "btn btn-outline-secondary disabled";
+                btn.innerHTML = `<i class="bi bi-clock"></i> Disponible en ${data.faltan} min`;
+                btn.style.pointerEvents = "none";
+            }
+        } catch (error) {
+            console.error("Error al chequear estado del botón:", error);
+        }
+    }
+
+    // --- 2. ADVERTENCIA SALUD RRHH (Advertencia visual) ---
+    const horaLoginStr = document.getElementById('horaLoginInput').value;
     if (horaLoginStr) {
         const horaLogin = new Date(horaLoginStr);
         const ahora = new Date();
         const diferenciaMs = ahora - horaLogin;
         const cincoMinutosMs = 5 * 60 * 1000;
-
         const tiempoRestante = Math.max(0, cincoMinutosMs - diferenciaMs);
 
         setTimeout(() => {
@@ -20,10 +48,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 confirmButtonColor: '#f89406',
                 confirmButtonText: 'Entendido'
             });
+            actualizarBotonRRHH(); // Re-chequear para activar botón
         }, tiempoRestante);
     }
 
-    // --- 2. MONITOREO DE PENDIENTES CADA 5 MINUTOS ---
+    // --- 3. MONITOREO DE PENDIENTES (Notificaciones Toast) ---
     setInterval(async () => {
         try {
             const response = await fetch('/actividades/api/pendientes-hoy');
@@ -41,8 +70,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     timerProgressBar: true
                 });
             }
+            actualizarBotonRRHH(); // Actualizar botón también aquí
         } catch (error) {
             console.error("Error al consultar pendientes:", error);
         }
     }, 5 * 60 * 1000);
+
+    // Ejecución inicial
+    actualizarBotonRRHH();
 });
