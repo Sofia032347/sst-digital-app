@@ -40,40 +40,49 @@
     <div id="contenedorAlertas">
         <div class="alert-section shadow-sm" th:if="${!empleadosPendientes.isEmpty()}">
             <h3><i class="bi bi-exclamation-triangle-fill"></i> Alerta: Pausas pendientes hoy</h3>
-
-            <p th:each="p : ${empleadosPendientes}"
-               th:if="${p.id == session.usuarioLogueado.id}"
-               class="text-danger fw-bold">
-                <i class="bi bi-exclamation-triangle-fill"></i> Usted aún no ha realizado su pausa activa obligatoria.
-            </p>
-
             <p>Los siguientes usuarios aún no han registrado su pausa:</p>
             <div class="d-flex flex-wrap gap-2 mt-2">
-        <span th:each="p : ${empleadosPendientes}"
-              class="badge-pendiente"
-              th:text="${p.nombre + ' (' + p.departamento + ')'}"></span>
+                <span th:each="p : ${empleadosPendientes}" class="badge-pendiente" th:text="${p.nombre + ' (' + p.departamento + ')'}"></span>
             </div>
         </div>
     </div>
 
-    <div class="toolbar d-flex flex-column flex-md-row gap-3">
-        <div class="filters">
-            <span class="fw-bold d-block d-sm-inline mb-2">Filtrar por: </span>
-            <a th:href="@{/actividades/rrhh(filtro='dia')}"
-               th:classappend="${filtroActual == 'dia' ? 'active' : ''}" class="btn btn-filter">Hoy</a>
-            <a th:href="@{/actividades/rrhh(filtro='semana')}"
-               th:classappend="${filtroActual == 'semana' ? 'active' : ''}" class="btn btn-filter">Semana</a>
-            <a th:href="@{/actividades/rrhh(filtro='mes')}"
-               th:classappend="${filtroActual == 'mes' ? 'active' : ''}" class="btn btn-filter">Mes</a>
-        </div>
-        <a th:href="@{/actividades/descargar}" class="btn btn-green shadow-sm">
-            <i class="bi bi-file-earmark-arrow-down-fill"></i> Descargar Reporte CSV
+    <div class="toolbar d-flex flex-column flex-md-row justify-content-between align-items-end gap-3 bg-light p-3 rounded shadow-sm">
+
+        <form th:action="@{/actividades/rrhh}" method="get" class="d-flex flex-wrap gap-3 align-items-end">
+            <div>
+                <label class="form-label fw-bold small">Consultar Fecha:</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                    <input type="date" name="fechaRef" th:value="${fechaRef}" class="form-control">
+                </div>
+            </div>
+
+            <div class="filters">
+                <label class="form-label fw-bold small d-block">Rango:</label>
+                <div class="btn-group">
+                    <button type="submit" name="filtro" value="dia"
+                            th:classappend="${filtroActual == 'dia' ? 'active' : ''}" class="btn btn-filter">Día</button>
+                    <button type="submit" name="filtro" value="semana"
+                            th:classappend="${filtroActual == 'semana' ? 'active' : ''}" class="btn btn-filter">Semana</button>
+                    <button type="submit" name="filtro" value="mes"
+                            th:classappend="${filtroActual == 'mes' ? 'active' : ''}" class="btn btn-filter">Mes</button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary shadow-sm">
+                <i class="bi bi-search"></i> Consultar
+            </button>
+        </form>
+
+        <a th:href="@{/actividades/descargar}" class="btn btn-green shadow-sm mb-1">
+            <i class="bi bi-file-earmark-arrow-down-fill"></i> Descargar CSV
         </a>
     </div>
 
-    <div class="table-responsive shadow-sm rounded">
-        <table class="table table-hover mb-0">
-            <thead>
+    <div class="table-responsive shadow-sm rounded mt-4">
+        <table class="table table-hover mb-0 bg-white">
+            <thead class="table-dark">
             <tr>
                 <th>Empleado</th>
                 <th>Departamento</th>
