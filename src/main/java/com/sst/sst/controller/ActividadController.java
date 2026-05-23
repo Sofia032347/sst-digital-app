@@ -20,10 +20,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -85,7 +82,6 @@ public class ActividadController {
     }
 
     // --- REPORTES ---
-    // --- REPORTES ACTUALIZADO CON AGRUPACIÓN DIARIA ---
     @GetMapping("/reportes")
     public String verReportes(
             @RequestParam(value = "periodo", defaultValue = "HOY") String periodo,
@@ -376,25 +372,41 @@ public class ActividadController {
         return ResponseEntity.ok("Registrada como CANCELADA");
     }
 
-    // --- API PENDIENTES (CORREGIDA: INCLUYE RRHH) ---
+    // --- API PENDIENTES ---
     @GetMapping("/api/pendientes-hoy")
     @ResponseBody
     public List<Map<String, String>> obtenerPendientesApi() {
+        LocalDateTime ahora = LocalDateTime.now();
         LocalDateTime inicioHoy = LocalDate.now().atStartOfDay();
-        LocalDateTime finHoy = LocalDate.now().atTime(LocalTime.MAX);
-
-        List<Long> yaHicieronPausa = actividadRepository.findByFechaBetween(inicioHoy, finHoy).stream()
-                .filter(a -> "COMPLETADA".equals(a.getEstado()) || "EN_PROCESO".equals(a.getEstado()))
-                .map(a -> a.getUsuario().getId())
-                .collect(Collectors.toList());
 
         return usuarioRepository.findAll().stream()
                 .filter(u -> "EMPLEADO".equals(u.getRol().getNombre()) || "RRHH".equals(u.getRol().getNombre()))
-                .filter(u -> !yaHicieronPausa.contains(u.getId()))
+                .filter(u -> {
+                    List<Actividad> actividadesHoy = actividadRepository.findByUsuarioIdAndFechaBetween(
+                            u.getId(), inicioHoy, ahora);
+
+                    if (actividadesHoy.isEmpty()) return true;
+
+                    // Si hay una en proceso, no interrumpir
+                    if (actividadesHoy.stream().anyMatch(a -> "EN_PROCESO".equals(a.getEstado()))) return false;
+
+                    // Buscamos la última completada
+                    Actividad ultima = actividadesHoy.stream()
+                            .filter(a -> "COMPLETADA".equals(a.getEstado()))
+                            .max(Comparator.comparing(Actividad::getFecha))
+                            .orElse(null);
+
+                    if (ultima == null) return true;
+
+                    // --- LOGICA DE SIMULACIÓN PARA DEMO ---
+                    // En lugar de 120 minutos, usamos 5 minutos para la muestra presencial
+                    long minutosDesdeUltima = java.time.Duration.between(ultima.getFecha(), ahora).toMinutes();
+
+                    return minutosDesdeUltima >= 5;
+                })
                 .map(u -> {
                     Map<String, String> data = new HashMap<>();
                     data.put("nombre", u.getNombre());
-                    data.put("departamento", u.getDepartamento());
                     return data;
                 }).collect(Collectors.toList());
     }
