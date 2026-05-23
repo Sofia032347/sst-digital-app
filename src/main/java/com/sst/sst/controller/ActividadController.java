@@ -263,11 +263,11 @@ public class ActividadController {
             estado = "BLOQUEADO_COMPLETO";
         } else if (tieneIncompleta) {
             estado = "REANUDAR";
-        } else if (minutosTranscurridos >= 5) {
+        } else if (minutosTranscurridos >= 2) {
             estado = "DISPONIBLE";
         } else {
             estado = "ESPERANDO";
-            respuesta.put("faltan", 5 - minutosTranscurridos);
+            respuesta.put("faltan", 2 - minutosTranscurridos);
         }
 
         respuesta.put("estado", estado);
@@ -467,7 +467,7 @@ public class ActividadController {
                     // En lugar de 120 minutos, usamos 5 minutos para la muestra presencial
                     long minutosDesdeUltima = java.time.Duration.between(ultima.getFecha(), ahora).toMinutes();
 
-                    return minutosDesdeUltima >= 5;
+                    return minutosDesdeUltima >= 2;
                 })
                 .map(u -> {
                     Map<String, String> data = new HashMap<>();
