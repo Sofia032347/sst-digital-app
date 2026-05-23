@@ -104,8 +104,8 @@ const HISTORIAL_MAX = 45;
 let historialHombros = [];
 let historialCodosY = [];
 
-// --- CONFIGURACIÓN DEL RECORDATORIO ---
-const TIEMPO_RECORDATORIO = 5 * 60 * 1000;
+// --- SECCIÓN DE NOTIFICACIONES ELIMINADA ---
+// Se eliminó TIEMPO_RECORDATORIO, iniciarTemporizadorRecordatorio y enviarAlertaPausaActiva.
 
 const video = document.querySelector("#videoElement");
 const canvasElement = document.getElementById("output_canvas");
@@ -127,31 +127,7 @@ pose.onResults(evaluarPosturaYDibujar);
 
 const camera = new Camera(video, { onFrame: async () => { await pose.send({ image: video }); }, width: 640, height: 480 });
 
-// --- LÓGICA DE RECORDATORIOS ---
-function iniciarTemporizadorRecordatorio() {
-    setInterval(() => {
-        if (!ejercicioActivo) {
-            enviarAlertaPausaActiva();
-        }
-    }, TIEMPO_RECORDATORIO);
-}
-
-function enviarAlertaPausaActiva() {
-    try {
-        new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3').play();
-    } catch(e){}
-
-    if (Notification.permission === "granted") {
-        new Notification("🕒 ¡Hora de tu Pausa Activa!", {
-            body: "Llevas mucho tiempo trabajando. Dedica unos minutos a estirar tu cuerpo y descansar la vista.",
-            icon: "/img/cuello1.jpeg"
-        });
-    } else {
-        alert("🕒 [RECORDATORIO] ¡Es momento de tu pausa activa de bienestar! Levántate de la silla y estira.");
-    }
-}
-
-// --- 4. LÓGICA PRINCIPAL Y ALERTA VISUAL ---
+// --- 4. LÓGICA PRINCIPAL (EVALUACIÓN DE POSTURA) ---
 function evaluarPosturaYDibujar(results) {
     if (canvasElement.width !== video.videoWidth && video.videoWidth > 0) {
         canvasElement.width = video.videoWidth;
@@ -160,7 +136,6 @@ function evaluarPosturaYDibujar(results) {
 
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-
     canvasCtx.translate(canvasElement.width, 0);
     canvasCtx.scale(-1, 1);
 
@@ -182,30 +157,23 @@ function evaluarPosturaYDibujar(results) {
     drawLandmarks(canvasCtx, results.poseLandmarks, { color: '#FF0000', lineWidth: 2, radius: 3 });
     canvasCtx.restore();
 
-    if (estaPausado) {
-        return;
-    }
+    if (estaPausado) return;
 
     actualizarHistoriales(results.poseLandmarks);
-
     let posturaCorrecta = validarMovimientoEspecifico(results.poseLandmarks);
 
     const ahora = Date.now();
     if (ahora - tiempoUltimoFrame >= 1000) {
         tiempoUltimoFrame = ahora;
-
         if (posturaCorrecta) {
             aiStatus.className = "badge bg-success text-white fs-5 p-2 shadow-sm";
             aiStatus.innerHTML = '<i class="bi bi-check-circle-fill"></i> Excelente, mantén la postura.';
             tiempoRestanteFase--;
             if (timerDisplay) timerDisplay.innerText = tiempoRestanteFase + "s";
-
-            if (tiempoRestanteFase <= 0) {
-                avanzarFaseOEjercicio();
-            }
+            if (tiempoRestanteFase <= 0) avanzarFaseOEjercicio();
         } else {
             aiStatus.className = "badge bg-warning text-dark fs-5 p-2 shadow-sm";
-            aiStatus.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> Postura incorrecta o incompleta. Tiempo Pausado.';
+            aiStatus.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> Postura incorrecta. Tiempo Pausado.';
         }
     }
 }
@@ -430,15 +398,7 @@ function avanzarFaseOEjercicio() {
         const nuevaFase = ejercicio.fases[indiceFaseActual];
         tiempoRestanteFase = nuevaFase.tiempo;
         exerciseDesc.innerText = nuevaFase.instruccion;
-
-        if (nuevaFase.imagen) {
-            exerciseImage.src = nuevaFase.imagen;
-        } else if (ejercicio.imagen) {
-            exerciseImage.src = ejercicio.imagen;
-        }
-
-        historialHombros = [];
-        historialCodosY  = [];
+        exerciseImage.src = nuevaFase.imagen || ejercicio.imagen;
         try { new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3').play(); } catch(e){}
     } else {
         finalizarEjercicio();
@@ -455,32 +415,19 @@ function iniciarTemporizador() {
 
     exerciseTitle.innerText = ej.titulo;
     exerciseDesc.innerText = fase.instruccion;
-
-    document.getElementById("progresoTexto").innerText = `Ejercicio ${indiceEjercicioActual + 1} de ${rutina.length}`;
-
-    if (fase.imagen) {
-        exerciseImage.src = fase.imagen;
-    } else if (ej.imagen) {
-        exerciseImage.src = ej.imagen;
-    }
-
+    exerciseImage.src = fase.imagen || ej.imagen;
     tiempoRestanteFase = fase.tiempo;
     if (timerDisplay) timerDisplay.innerText = tiempoRestanteFase + "s";
 
     ejercicioActivo = true;
     estaPausado = false;
     tiempoUltimoFrame = Date.now();
-    historialHombros = [];
-    historialCodosY  = [];
 
     aiStatus.className = "badge bg-info text-dark fs-5 p-2 shadow-sm";
     aiStatus.innerHTML = '<i class="bi bi-robot"></i> Evaluando postura...';
 
     if (indiceEjercicioActual === 0 && indiceFaseActual === 0) {
-        fetch('/actividades/iniciar-pausa', { method: 'POST' })
-            .then(res => res.json())
-            .then(id => console.log("Registro creado en la BD con ID: " + id))
-            .catch(err => console.error("Error al registrar inicio", err));
+        fetch('/actividades/iniciar-pausa', { method: 'POST' }).catch(err => console.error(err));
     }
 }
 
@@ -493,57 +440,30 @@ function finalizarEjercicio() {
     btnCancelar.disabled = true;
     aiStatus.className = "badge bg-info text-dark fs-5 p-2 shadow-sm";
     aiStatus.innerHTML = '<i class="bi bi-person-arms-up"></i> Descansa un momento';
-
     try { new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3').play(); } catch(e){}
-
-    if (indiceEjercicioActual === rutina.length - 1) {
-        btnNext.innerHTML = 'Finalizar Pausa Activa <i class="bi bi-check-lg"></i>';
-        btnNext.classList.replace("btn-outline-primary", "btn-primary");
-    }
 }
 
 function siguienteEjercicio() {
     indiceEjercicioActual++;
     indiceFaseActual = 0;
-
     if (indiceEjercicioActual >= rutina.length) {
         window.location.href = "/actividades/finalizar-pausa";
         return;
     }
-
-    historialHombros = [];
-    historialCodosY  = [];
-
     const ej = rutina[indiceEjercicioActual];
     const primeraFase = ej.fases[0];
-
     exerciseTitle.innerText = ej.titulo;
-    exerciseDesc.innerText  = primeraFase.instruccion;
-
-    if (primeraFase.imagen) {
-        exerciseImage.src = primeraFase.imagen;
-    } else if (ej.imagen) {
-        exerciseImage.src = ej.imagen;
-    }
-
+    exerciseDesc.innerText = primeraFase.instruccion;
+    exerciseImage.src = primeraFase.imagen || ej.imagen;
     tiempoRestanteFase = primeraFase.tiempo;
     timerDisplay.innerText = tiempoRestanteFase + "s";
 
-    const porcentaje = ((indiceEjercicioActual + 1) / rutina.length) * 100;
-    document.getElementById("rutinaProgress").style.width = porcentaje + "%";
-
-    document.getElementById("progresoTexto").innerText = `Ejercicio ${indiceEjercicioActual + 1} de ${rutina.length}`;
-
+    document.getElementById("rutinaProgress").style.width = (((indiceEjercicioActual + 1) / rutina.length) * 100) + "%";
     btnStart.disabled = false;
     btnNext.disabled = true;
-    btnPausar.disabled = true;
-    btnCancelar.disabled = true;
-    aiStatus.className = "badge bg-secondary text-white fs-5 p-2 shadow-sm";
-    aiStatus.innerHTML = '<i class="bi bi-hourglass-split"></i> IA Esperando iniciar...';
 }
 
 // --- 6. FUNCIONES DE PAUSAR Y CANCELAR (ACTUALIZADAS) ---
-
 function pausarEjercicio() {
     if (!ejercicioActivo) return;
     estaPausado = true;
@@ -635,58 +555,28 @@ async function cancelarEjercicio() {
 }
 
 // --- 7. INICIO Y CONTROLADORES ---
-
-console.log("SST Digital: Script cargado completamente.");
-
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("SST Digital: DOM listo, inicializando componentes...");
+    if (typeof Camera === 'undefined' || typeof Pose === 'undefined') return;
 
-    // 1. Verificación de librerías
-    if (typeof Camera === 'undefined' || typeof Pose === 'undefined') {
-        console.error("ERROR: MediaPipe no está cargado. Revisa los scripts en el HTML.");
-        return;
-    }
-
-    // 2. Encendido de la cámara
-    console.log("SST Digital: Intentando encender cámara...");
     camera.start()
         .then(() => {
-            console.log("Cámara encendida con éxito.");
             const camStatus = document.querySelector("#cameraStatus");
             if (camStatus) camStatus.style.display = "none";
         })
-        .catch(err => {
-            console.error("Error al iniciar cámara:", err);
-            aiStatus.innerHTML = '<span class="badge bg-danger">Error de cámara</span>';
-        });
+        .catch(err => console.error("Error cámara:", err));
 
-    // 3. Interceptores de salida dinámicos (Para RRHH y Empleado)
     const btnVolver = document.getElementById('btnVolver');
     const formLogout = document.getElementById('formLogout');
 
     if (btnVolver) {
         btnVolver.addEventListener('click', (e) => {
-            if (ejercicioActivo) {
-                e.preventDefault();
-                procesarCancelacionYSalida(btnVolver.href);
-            }
+            if (ejercicioActivo) { e.preventDefault(); procesarCancelacionYSalida(btnVolver.href); }
         });
-        console.log("Botón Volver detectado y protegido.");
     }
 
     if (formLogout) {
         formLogout.addEventListener('submit', (e) => {
-            if (ejercicioActivo) {
-                e.preventDefault();
-                procesarCancelacionYSalida(null, formLogout);
-            }
+            if (ejercicioActivo) { e.preventDefault(); procesarCancelacionYSalida(null, formLogout); }
         });
-        console.log("Formulario de Logout detectado y protegido.");
     }
-
-    // 4. Inicializar notificaciones y recordatorios
-    if (window.Notification && Notification.permission !== "granted") {
-        Notification.requestPermission();
-    }
-    iniciarTemporizadorRecordatorio();
 });

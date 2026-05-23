@@ -21,7 +21,14 @@ public class LoginController {
     }
 
     @GetMapping("/login")
-    public String mostrarLogin(Model model) {
+    public String mostrarLogin(Model model, HttpSession session) {
+        Usuario logueado = (Usuario) session.getAttribute("usuarioLogueado");
+        if (logueado != null) {
+            return logueado.getRol().getNombre().equals("RRHH")
+                    ? "redirect:/actividades/rrhh"
+                    : "redirect:/actividades/empleado";
+        }
+
         model.addAttribute("usuario", new Usuario());
         return "login";
     }
@@ -38,7 +45,10 @@ public class LoginController {
             Usuario usuarioLogueado = user.get();
 
             session.setAttribute("usuarioLogueado", usuarioLogueado);
-            session.setAttribute("horaInicioSesion", java.time.LocalDateTime.now());
+
+            if (session.getAttribute("horaInicioSesion") == null) {
+                session.setAttribute("horaInicioSesion", java.time.LocalDateTime.now());
+            }
 
             if (usuarioLogueado.getRol().getNombre().equals("RRHH")) {
                 return "redirect:/actividades/rrhh";
