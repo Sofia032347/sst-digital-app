@@ -37,13 +37,12 @@ public class ActividadController {
     @GetMapping("/rrhh")
     public String mostrarDashboard(
             @RequestParam(required = false) String filtro,
-            @RequestParam(value = "fechaRef", required = false) String fechaRef, // Nuevo parámetro
+            @RequestParam(value = "fechaRef", required = false) String fechaRef,
             Model model,
             HttpSession session) {
 
         if (session.getAttribute("usuarioLogueado") == null) return "redirect:/login";
 
-        // Determinar fecha de referencia (Hoy o la del calendario)
         LocalDate fechaReferencia = (fechaRef != null && !fechaRef.isEmpty())
                 ? LocalDate.parse(fechaRef)
                 : LocalDate.now();
@@ -52,7 +51,6 @@ public class ActividadController {
         LocalDateTime finTabla;
         String filtroReal = (filtro != null) ? filtro : "dia";
 
-        // Ajuste de rangos respetando la fecha de referencia
         if ("semana".equals(filtroReal)) {
             inicioTabla = fechaReferencia.with(DayOfWeek.MONDAY).atStartOfDay();
             finTabla = fechaReferencia.with(DayOfWeek.SUNDAY).atTime(LocalTime.MAX);
@@ -64,16 +62,52 @@ public class ActividadController {
             finTabla = fechaReferencia.atTime(LocalTime.MAX);
         }
 
-        // Buscamos actividades en el rango seleccionado
-        List<Actividad> actividadesTabla = actividadRepository.findByFechaBetween(inicioTabla, finTabla);
+        List<Actividad> actividadesBD = actividadRepository.findByFechaBetween(inicioTabla, finTabla);
 
-        // Las alertas de pendientes siempre se calculan sobre el "Hoy" real del servidor
-        LocalDateTime inicioHoyReal = LocalDate.now().atStartOfDay();
-        LocalDateTime finHoyReal = LocalDate.now().atTime(LocalTime.MAX);
-        List<Actividad> actividadesEstrictamenteHoy = actividadRepository.findByFechaBetween(inicioHoyReal, finHoyReal);
-        List<Usuario> pendientes = obtenerPendientesHoy(actividadesEstrictamenteHoy);
+        // --- LÓGICA DE AGRUPACIÓN PARA LA TABLA ---
+        List<Map<String, Object>> datosAgrupados = new ArrayList<>();
 
-        model.addAttribute("listaActividades", actividadesTabla);
+        // Agrupamos por Usuario y por Fecha (sin hora)
+        Map<Usuario, Map<LocalDate, List<Actividad>>> agrupado = actividadesBD.stream()
+                .collect(Collectors.groupingBy(
+                        Actividad::getUsuario,
+                        Collectors.groupingBy(a -> a.getFecha().toLocalDate())
+                ));
+
+        for (var entryUsuario : agrupado.entrySet()) {
+            Usuario u = entryUsuario.getKey();
+            for (var entryDia : entryUsuario.getValue().entrySet()) {
+                LocalDate fecha = entryDia.getKey();
+                List<Actividad> acts = entryDia.getValue();
+
+                // Rango de horas
+                LocalTime minH = acts.stream().map(a -> a.getFecha().toLocalTime()).min(LocalTime::compareTo).get();
+                LocalTime maxH = acts.stream().map(a -> a.getFecha().toLocalTime()).max(LocalTime::compareTo).get();
+
+                // Suma de tiempo y conteo
+                int sumaTiempo = acts.stream().filter(a -> "COMPLETADA".equals(a.getEstado()))
+                        .mapToInt(a -> a.getDuracionSegundos() != null ? a.getDuracionSegundos() : 0).sum();
+                long completadas = acts.stream().filter(a -> "COMPLETADA".equals(a.getEstado())).count();
+
+                Map<String, Object> fila = new HashMap<>();
+                fila.put("nombre", u.getNombre());
+                fila.put("departamento", u.getDepartamento());
+                fila.put("fechaDia", fecha.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+                fila.put("rangoHoras", minH.format(DateTimeFormatter.ofPattern("HH:mm")) + " - " + maxH.format(DateTimeFormatter.ofPattern("HH:mm")));
+                fila.put("tiempoTotal", sumaTiempo);
+                fila.put("cantidadPausas", (int) completadas);
+                fila.put("estadoDia", (completadas >= 4) ? "COMPLETO" : "INCOMPLETO");
+                datosAgrupados.add(fila);
+            }
+        }
+
+        // Ordenar por fecha descendente
+        datosAgrupados.sort((a, b) -> b.get("fechaDia").toString().compareTo(a.get("fechaDia").toString()));
+
+        // Alertas de hoy real
+        List<Usuario> pendientes = obtenerPendientesHoy(actividadRepository.findByFechaBetween(LocalDate.now().atStartOfDay(), LocalDate.now().atTime(LocalTime.MAX)));
+
+        model.addAttribute("listaActividades", datosAgrupados); // Enviamos la lista agrupada
         model.addAttribute("empleadosPendientes", pendientes);
         model.addAttribute("filtroActual", filtroReal);
         model.addAttribute("fechaRef", fechaReferencia);
