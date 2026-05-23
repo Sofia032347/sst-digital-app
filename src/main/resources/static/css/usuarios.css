@@ -64,6 +64,18 @@ body {
     box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.1);
 }
 
+.btn-logout {
+    background-color: #dc3545;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 5px;
+    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.3s;
+}
+
 @media (max-width: 768px) {
     .container {
         padding-left: 15px;
