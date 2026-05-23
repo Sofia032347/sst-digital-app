@@ -209,6 +209,7 @@ public class ActividadController {
         nuevaActividad.setDuracionSegundos(0);
         nuevaActividad.setEjerciciosCompletados(0);
         nuevaActividad.setValidadoIA(false);
+        nuevaActividad.setEstado(Actividad.ESTADO_EN_PROCESO);
 
         Actividad guardada = actividadRepository.save(nuevaActividad);
         session.setAttribute("idActividadActual", guardada.getId());
@@ -227,9 +228,6 @@ public class ActividadController {
         if (idActividad != null) {
             Actividad actividadExistente = actividadRepository.findById(idActividad).orElse(null);
             if (actividadExistente != null) {
-                // Si quieres guardar el tiempo exacto que duró en lugar de un número fijo:
-                // long segundosTranscurridos = java.time.Duration.between(actividadExistente.getFecha(), LocalDateTime.now()).getSeconds();
-                // actividadExistente.setDuracionSegundos((int) segundosTranscurridos);
 
                 actividadExistente.setDuracionSegundos(600); // 10 minutos fijos
                 actividadExistente.setEjerciciosCompletados(10);
@@ -243,10 +241,10 @@ public class ActividadController {
         return "RRHH".equals(logueado.getRol().getNombre()) ? "redirect:/actividades/rrhh" : "redirect:/actividades/empleado";
     }
 
-    // --- CANCELAR PAUSA (INCOMPLETA / INTERRUPCIÓN) ---
-    @PostMapping("/cancelar-pausa")
+    // --- CANCELAR PAUSA (BOTÓN CANCELAR - INCOMPLETA) ---
+    @PostMapping("/boton-cancelar")
     @ResponseBody
-    public ResponseEntity<String> cancelarPausa(HttpSession session) {
+    public ResponseEntity<String> botonCancelarPausa(HttpSession session) {
         Long idActividad = (Long) session.getAttribute("idActividadActual");
 
         if (idActividad != null) {
@@ -255,23 +253,30 @@ public class ActividadController {
                 actividad.setEstado(Actividad.ESTADO_INCOMPLETA);
 
                 if (actividad.getFecha() != null) {
-                    long segundosReales = java.time.Duration.between(actividad.getFecha(), java.time.LocalDateTime.now()).getSeconds();
-                    actividad.setDuracionSegundos((int) segundosReales);
-
-                    int ejerciciosEstimados = Math.min((int) (segundosReales / 60), 9);
-                    actividad.setEjerciciosCompletados(ejerciciosEstimados);
-                    actividad.setValidadoIA(ejerciciosEstimados > 0);
-                } else {
-                    actividad.setDuracionSegundos(0);
-                    actividad.setEjerciciosCompletados(0);
-                    actividad.setValidadoIA(false);
+                    long segundos = java.time.Duration.between(actividad.getFecha(), java.time.LocalDateTime.now()).getSeconds();
+                    actividad.setDuracionSegundos((int) segundos);
                 }
-
                 actividadRepository.save(actividad);
             }
             session.removeAttribute("idActividadActual");
-            return ResponseEntity.ok("La actividad fue interceptada y guardada como INCOMPLETA en la Base de Datos.");
+            return ResponseEntity.ok("Registrada como INCOMPLETA");
         }
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No se encontró ninguna pausa activa en proceso para cancelar.");
+        return ResponseEntity.badRequest().build();
+    }
+
+    // --- SALIDA FORZADA (LOGOUT/VOLVER - CANCELADA) ---
+    @PostMapping("/cancelar-pausa")
+    @ResponseBody
+    public ResponseEntity<String> cancelarPausaForzada(HttpSession session) {
+        Long idActividad = (Long) session.getAttribute("idActividadActual");
+        if (idActividad != null) {
+            Actividad actividad = actividadRepository.findById(idActividad).orElse(null);
+            if (actividad != null) {
+                actividad.setEstado(Actividad.ESTADO_CANCELADA);
+                actividadRepository.save(actividad);
+            }
+            session.removeAttribute("idActividadActual");
+        }
+        return ResponseEntity.ok("Registrada como CANCELADA");
     }
 }

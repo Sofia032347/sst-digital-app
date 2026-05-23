@@ -543,6 +543,7 @@ function siguienteEjercicio() {
 }
 
 // --- 6. FUNCIONES DE PAUSAR Y CANCELAR (ACTUALIZADAS) ---
+
 function pausarEjercicio() {
     if (!ejercicioActivo) return;
     estaPausado = true;
@@ -563,7 +564,8 @@ function pausarEjercicio() {
     });
 }
 
-function procesarCancelacionYSalida(urlDestino = null, formulario = null) {
+// ESTA FUNCIÓN MANEJA LA SALIDA FORZADA (ESTADO: CANCELADA)
+async function procesarCancelacionYSalida(urlDestino = null, formulario = null) {
     if (!ejercicioActivo) {
         if (formulario) formulario.submit();
         else if (urlDestino) window.location.href = urlDestino;
@@ -572,9 +574,9 @@ function procesarCancelacionYSalida(urlDestino = null, formulario = null) {
 
     estaPausado = true;
 
-    Swal.fire({
+    const result = await Swal.fire({
         title: '¿Abandonar la pausa activa?',
-        text: 'Si sales ahora, la actividad se registrará como INCOMPLETA.',
+        text: 'Si sales ahora, la actividad se registrará como CANCELADA.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
@@ -582,42 +584,54 @@ function procesarCancelacionYSalida(urlDestino = null, formulario = null) {
         confirmButtonText: '<i class="bi bi-x-circle"></i> Sí, salir',
         cancelButtonText: 'Continuar ejercicio',
         allowOutsideClick: false
-    }).then((result) => {
-        if (result.isConfirmed) {
-            Swal.fire({
-                title: 'Guardando progreso...',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
-            });
-
-            fetch('/actividades/cancelar-pausa', { method: 'POST' })
-                .then(() => {
-                    if (formulario) {
-                        formulario.submit();
-                    } else if (urlDestino) {
-                        window.location.href = urlDestino;
-                    } else {
-
-                        const btnVolver = document.getElementById('btnVolver');
-                        if (btnVolver && btnVolver.href) {
-                            window.location.href = btnVolver.href;
-                        } else {
-                            window.location.href = "/";
-                        }
-                    }
-                })
-                .catch(() => {
-                    window.location.href = "/";
-                });
-        } else {
-            estaPausado = false;
-            tiempoUltimoFrame = Date.now();
-        }
     });
+
+    if (result.isConfirmed) {
+        Swal.fire({ title: 'Cerrando sesión...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+        try {
+            // Llamada al endpoint de salida forzada
+            await fetch('/actividades/cancelar-pausa', { method: 'POST' });
+        } catch (e) { console.error("Error al cancelar"); }
+
+        if (formulario) formulario.submit();
+        else window.location.href = urlDestino || "/actividades/empleado";
+    } else {
+        estaPausado = false;
+        tiempoUltimoFrame = Date.now();
+    }
 }
 
-function cancelarEjercicio() {
-    procesarCancelacionYSalida();
+// ESTA FUNCIÓN MANEJA EL BOTÓN "CANCELAR" DE LA INTERFAZ (ESTADO: INCOMPLETA)
+async function cancelarEjercicio() {
+    if (!ejercicioActivo) return;
+    estaPausado = true;
+
+    const result = await Swal.fire({
+        title: '¿Deseas cancelar la rutina?',
+        text: 'Tu progreso actual se guardará como INCOMPLETA.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#f89406',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, cancelar pausa',
+        cancelButtonText: 'Continuar',
+        allowOutsideClick: false
+    });
+
+    if (result.isConfirmed) {
+        Swal.fire({ title: 'Guardando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+        try {
+            // Llamada al NUEVO endpoint que pones en INCOMPLETA
+            await fetch('/actividades/boton-cancelar', { method: 'POST' });
+        } catch (e) { console.error("Error al cancelar"); }
+
+        window.location.href = "/actividades/empleado";
+    } else {
+        estaPausado = false;
+        tiempoUltimoFrame = Date.now();
+    }
 }
 
 // --- 7. INICIO Y CONTROLADORES ---
@@ -629,7 +643,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1. Verificación de librerías
     if (typeof Camera === 'undefined' || typeof Pose === 'undefined') {
-        console.error("❌ ERROR: MediaPipe no está cargado. Revisa los scripts en el HTML.");
+        console.error("ERROR: MediaPipe no está cargado. Revisa los scripts en el HTML.");
         return;
     }
 
@@ -637,12 +651,12 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("SST Digital: Intentando encender cámara...");
     camera.start()
         .then(() => {
-            console.log("✅ Cámara encendida con éxito.");
+            console.log("Cámara encendida con éxito.");
             const camStatus = document.querySelector("#cameraStatus");
             if (camStatus) camStatus.style.display = "none";
         })
         .catch(err => {
-            console.error("❌ Error al iniciar cámara:", err);
+            console.error("Error al iniciar cámara:", err);
             aiStatus.innerHTML = '<span class="badge bg-danger">Error de cámara</span>';
         });
 

@@ -11,6 +11,7 @@ public class Actividad {
     public static final String ESTADO_EN_PROCESO = "EN_PROCESO";
     public static final String ESTADO_INCOMPLETA = "INCOMPLETA";
     public static final String ESTADO_COMPLETADA = "COMPLETADA";
+    public static final String ESTADO_CANCELADA = "CANCELADA";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -48,8 +49,6 @@ public class Actividad {
         this.validadoIA = validadoIA;
         this.estado = estado;
     }
-
-    // --- GETTERS Y SETTERS ---
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
