@@ -55,6 +55,8 @@ public class ActividadController {
 
         List<Actividad> actividadesTabla = actividadRepository.findByFechaBetween(inicioTabla, ahora);
         List<Actividad> actividadesEstrictamenteHoy = actividadRepository.findByFechaBetween(inicioHoy, ahora);
+
+        // Aquí se calculan los pendientes incluyendo a RRHH
         List<Usuario> pendientes = obtenerPendientesHoy(actividadesEstrictamenteHoy);
 
         model.addAttribute("listaActividades", actividadesTabla);
@@ -147,7 +149,7 @@ public class ActividadController {
         return "empleado/empleado";
     }
 
-    // --- NUEVO: ENDPOINT DE ESTADO PARA BLOQUEO DE BOTÓN ---
+    // --- ENDPOINT DE ESTADO PARA BLOQUEO DE BOTÓN ---
     @GetMapping("/estado-boton")
     @ResponseBody
     public Map<String, Object> verificarEstadoBoton(HttpSession session) {
@@ -160,13 +162,11 @@ public class ActividadController {
         LocalDateTime finHoy = LocalDate.now().atTime(LocalTime.MAX);
         LocalDateTime horaLogin = (LocalDateTime) session.getAttribute("horaInicioSesion");
 
-        // 1. Tiempo transcurrido (5 min)
         long minutosTranscurridos = 0;
         if (horaLogin != null) {
             minutosTranscurridos = java.time.Duration.between(horaLogin, LocalDateTime.now()).toMinutes();
         }
 
-        // 2. Buscar actividades de hoy
         List<Actividad> actividadesHoy = actividadRepository.findByUsuarioIdAndFechaBetween(
                 logueado.getId(), inicioHoy, finHoy);
 
@@ -189,14 +189,15 @@ public class ActividadController {
         return respuesta;
     }
 
-    // --- LÓGICA DE PENDIENTES ---
+    // --- LÓGICA DE PENDIENTES (CORREGIDA: INCLUYE RRHH) ---
     private List<Usuario> obtenerPendientesHoy(List<Actividad> actividadesDeHoy) {
         List<Long> completadosIds = actividadesDeHoy.stream()
+                .filter(a -> "COMPLETADA".equals(a.getEstado()))
                 .map(a -> a.getUsuario().getId())
                 .collect(Collectors.toList());
 
         return usuarioRepository.findAll().stream()
-                .filter(u -> u.getRol().getNombre().equals("EMPLEADO"))
+                .filter(u -> "EMPLEADO".equals(u.getRol().getNombre()) || "RRHH".equals(u.getRol().getNombre()))
                 .filter(u -> !completadosIds.contains(u.getId()))
                 .collect(Collectors.toList());
     }
@@ -271,14 +272,13 @@ public class ActividadController {
         if (idActividad != null) {
             Actividad actividadExistente = actividadRepository.findById(idActividad).orElse(null);
             if (actividadExistente != null) {
-
-                actividadExistente.setDuracionSegundos(600); // 10 minutos fijos
+                actividadExistente.setDuracionSegundos(600);
                 actividadExistente.setEjerciciosCompletados(10);
                 actividadExistente.setValidadoIA(true);
                 actividadExistente.setEstado(Actividad.ESTADO_COMPLETADA);
                 actividadRepository.save(actividadExistente);
             }
-            session.removeAttribute("idActividadActual"); // Limpiamos la sesión para que no quede activa
+            session.removeAttribute("idActividadActual");
         }
 
         return "RRHH".equals(logueado.getRol().getNombre()) ? "redirect:/actividades/rrhh" : "redirect:/actividades/empleado";
@@ -294,7 +294,6 @@ public class ActividadController {
             Actividad actividad = actividadRepository.findById(idActividad).orElse(null);
             if (actividad != null) {
                 actividad.setEstado(Actividad.ESTADO_INCOMPLETA);
-
                 if (actividad.getFecha() != null) {
                     long segundos = java.time.Duration.between(actividad.getFecha(), java.time.LocalDateTime.now()).getSeconds();
                     actividad.setDuracionSegundos((int) segundos);
@@ -323,20 +322,20 @@ public class ActividadController {
         return ResponseEntity.ok("Registrada como CANCELADA");
     }
 
+    // --- API PENDIENTES (CORREGIDA: INCLUYE RRHH) ---
     @GetMapping("/api/pendientes-hoy")
     @ResponseBody
     public List<Map<String, String>> obtenerPendientesApi() {
         LocalDateTime inicioHoy = LocalDate.now().atStartOfDay();
         LocalDateTime finHoy = LocalDate.now().atTime(LocalTime.MAX);
 
-        // Usuarios que ya hicieron algo hoy (Completado o En Proceso)
         List<Long> yaHicieronPausa = actividadRepository.findByFechaBetween(inicioHoy, finHoy).stream()
                 .filter(a -> "COMPLETADA".equals(a.getEstado()) || "EN_PROCESO".equals(a.getEstado()))
                 .map(a -> a.getUsuario().getId())
                 .collect(Collectors.toList());
 
         return usuarioRepository.findAll().stream()
-                .filter(u -> "EMPLEADO".equals(u.getRol().getNombre()))
+                .filter(u -> "EMPLEADO".equals(u.getRol().getNombre()) || "RRHH".equals(u.getRol().getNombre()))
                 .filter(u -> !yaHicieronPausa.contains(u.getId()))
                 .map(u -> {
                     Map<String, String> data = new HashMap<>();
@@ -345,5 +344,4 @@ public class ActividadController {
                     return data;
                 }).collect(Collectors.toList());
     }
-
 }

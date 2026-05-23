@@ -39,10 +39,19 @@
 
     <div id="contenedorAlertas">
         <div class="alert-section shadow-sm" th:if="${!empleadosPendientes.isEmpty()}">
-            <h3><i class="bi bi-exclamation-triangle-fill"></i> Alerta: Empleados pendientes hoy</h3>
-            <p>Los siguientes empleados aún no han registrado su pausa activa obligatoria:</p>
+            <h3><i class="bi bi-exclamation-triangle-fill"></i> Alerta: Pausas pendientes hoy</h3>
+
+            <p th:each="p : ${empleadosPendientes}"
+               th:if="${p.id == session.usuarioLogueado.id}"
+               class="text-danger fw-bold">
+                <i class="bi bi-exclamation-triangle-fill"></i> Usted aún no ha realizado su pausa activa obligatoria.
+            </p>
+
+            <p>Los siguientes usuarios aún no han registrado su pausa:</p>
             <div class="d-flex flex-wrap gap-2 mt-2">
-                <span th:each="p : ${empleadosPendientes}" class="badge-pendiente" th:text="${p.nombre + ' (' + p.departamento + ')'}"></span>
+        <span th:each="p : ${empleadosPendientes}"
+              class="badge-pendiente"
+              th:text="${p.nombre + ' (' + p.departamento + ')'}"></span>
             </div>
         </div>
     </div>
