@@ -76,7 +76,8 @@ public class ActividadController {
         model.addAttribute("listaActividades", actividadesTabla);
         model.addAttribute("empleadosPendientes", pendientes);
         model.addAttribute("filtroActual", filtroReal);
-        model.addAttribute("fechaRef", fechaReferencia); // Para que el input date mantenga la fecha
+        model.addAttribute("fechaRef", fechaReferencia);
+        model.addAttribute("periodo", filtroReal.toUpperCase());
 
         return "rrhh/rrhh";
     }

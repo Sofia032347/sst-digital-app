@@ -93,20 +93,22 @@
             </tr>
             </thead>
             <tbody>
-            <tr th:each="fila : ${datosReporte}">
-                <td th:text="${fila.nombre}" class="fw-bold"></td>
-                <td th:text="${fila.departamento}"></td>
+            <tr th:each="act : ${listaActividades}">
+                <td th:text="${act.usuario.nombre}" class="fw-bold"></td>
+                <td th:text="${act.usuario.departamento}"></td>
 
-                <td th:text="${fila.fechaHora != null ? fila.fechaHora : fila.fechaDia}"></td>
+                <td th:text="${#temporals.format(act.fecha, 'dd/MM/yyyy HH:mm')}"></td>
 
-                <td th:text="${fila.rangoHoras != null ? fila.rangoHoras : fila.estado}"></td>
+                <td>
+            <span class="badge"
+                  th:classappend="${act.estado == 'COMPLETADA' ? 'bg-success' : 'bg-warning text-dark'}"
+                  th:text="${act.estado}"></span>
+                </td>
 
-                <td th:text="${fila.tiempoTotal + ' seg'}"></td>
+                <td th:text="${act.duracionSegundos + ' seg'}"></td>
 
-                <td th:if="${fila.cantidadPausas != null}">
-                <span th:text="${fila.cantidadPausas + ' / 4'}"
-                      class="badge"
-                      th:classappend="${fila.estado == 'COMPLETO' ? 'bg-success' : 'bg-warning text-dark'}"></span>
+                <td>
+                    <i class="bi bi-info-circle text-primary"></i> Detalle
                 </td>
             </tr>
             </tbody>
