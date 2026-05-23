@@ -287,7 +287,7 @@ public class ActividadController {
                 .collect(Collectors.toList());
     }
 
-    // --- DESCARGAR REPORTE CSV ---
+    // --- DESCARGAR REPORTE AGRUPADO (CSV PROFESIONAL) ---
     @GetMapping("/descargar")
     public void descargarCSV(HttpServletResponse response, HttpSession session) throws IOException {
         if (session.getAttribute("usuarioLogueado") == null) {
@@ -295,22 +295,52 @@ public class ActividadController {
             return;
         }
 
-        response.setContentType("text/csv");
-        response.setHeader("Content-Disposition", "attachment; filename=reporte_pausas.csv");
+        // Configuración de respuesta para CSV
+        response.setContentType("text/csv; charset=UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename=reporte_pausas_agrupado.csv");
 
-        List<Actividad> todas = actividadRepository.findAll();
+        // 1. Obtener todas las actividades y agruparlas (Igual que en el Dashboard)
+        List<Actividad> actividadesBD = actividadRepository.findAll();
+
+        Map<Usuario, Map<LocalDate, List<Actividad>>> agrupado = actividadesBD.stream()
+                .collect(Collectors.groupingBy(
+                        Actividad::getUsuario,
+                        Collectors.groupingBy(a -> a.getFecha().toLocalDate())
+                ));
+
         StringBuilder sb = new StringBuilder();
-        sb.append("ID,Empleado,Departamento,Fecha,Duracion(Seg),Ejercicios,ValidadoIA,Estado\n");
+        // Escribir BOM para que Excel reconozca tildes y caracteres especiales
+        sb.append('\ufeff');
+        // Encabezados profesionales
+        sb.append("Empleado,Departamento,Fecha,Jornada (Rango),Tiempo Total (Seg),Cumplimiento,Estado\n");
 
-        for (Actividad a : todas) {
-            sb.append(a.getId()).append(",")
-                    .append(a.getUsuario().getNombre()).append(",")
-                    .append(a.getUsuario().getDepartamento()).append(",")
-                    .append(a.getFecha()).append(",")
-                    .append(a.getDuracionSegundos() != null ? a.getDuracionSegundos() : 0).append(",")
-                    .append(a.getEjerciciosCompletados() != null ? a.getEjerciciosCompletados() : 0).append(",")
-                    .append(a.getValidadoIA() != null ? a.getValidadoIA() : false).append(",")
-                    .append(a.getEstado() != null ? a.getEstado() : "DESCONOCIDO").append("\n");
+        // 2. Procesar los datos agrupados
+        for (var entryUsuario : agrupado.entrySet()) {
+            Usuario u = entryUsuario.getKey();
+            for (var entryDia : entryUsuario.getValue().entrySet()) {
+                LocalDate fecha = entryDia.getKey();
+                List<Actividad> acts = entryDia.getValue();
+
+                // Calcular Rango
+                LocalTime minH = acts.stream().map(a -> a.getFecha().toLocalTime()).min(LocalTime::compareTo).get();
+                LocalTime maxH = acts.stream().map(a -> a.getFecha().toLocalTime()).max(LocalTime::compareTo).get();
+                String rango = minH.format(DateTimeFormatter.ofPattern("HH:mm")) + " - " + maxH.format(DateTimeFormatter.ofPattern("HH:mm"));
+
+                // Calcular Cumplimiento
+                int sumaTiempo = acts.stream().filter(a -> "COMPLETADA".equals(a.getEstado()))
+                        .mapToInt(a -> a.getDuracionSegundos() != null ? a.getDuracionSegundos() : 0).sum();
+                long completadas = acts.stream().filter(a -> "COMPLETADA".equals(a.getEstado())).count();
+                String estado = (completadas >= 4) ? "COMPLETO" : "INCOMPLETO";
+
+                // Escribir fila
+                sb.append(u.getNombre()).append(",")
+                        .append(u.getDepartamento()).append(",")
+                        .append(fecha.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))).append(",")
+                        .append(rango).append(",")
+                        .append(sumaTiempo).append(",")
+                        .append(completadas).append(" / 4,")
+                        .append(estado).append("\n");
+            }
         }
 
         response.getWriter().write(sb.toString());
