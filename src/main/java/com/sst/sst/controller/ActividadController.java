@@ -279,4 +279,28 @@ public class ActividadController {
         }
         return ResponseEntity.ok("Registrada como CANCELADA");
     }
+
+    @GetMapping("/api/pendientes-hoy")
+    @ResponseBody
+    public List<Map<String, String>> obtenerPendientesApi() {
+        LocalDateTime inicioHoy = LocalDate.now().atStartOfDay();
+        LocalDateTime finHoy = LocalDate.now().atTime(LocalTime.MAX);
+
+        // Usuarios que ya hicieron algo hoy (Completado o En Proceso)
+        List<Long> yaHicieronPausa = actividadRepository.findByFechaBetween(inicioHoy, finHoy).stream()
+                .filter(a -> "COMPLETADA".equals(a.getEstado()) || "EN_PROCESO".equals(a.getEstado()))
+                .map(a -> a.getUsuario().getId())
+                .collect(Collectors.toList());
+
+        return usuarioRepository.findAll().stream()
+                .filter(u -> "EMPLEADO".equals(u.getRol().getNombre()))
+                .filter(u -> !yaHicieronPausa.contains(u.getId()))
+                .map(u -> {
+                    Map<String, String> data = new HashMap<>();
+                    data.put("nombre", u.getNombre());
+                    data.put("departamento", u.getDepartamento());
+                    return data;
+                }).collect(Collectors.toList());
+    }
+
 }

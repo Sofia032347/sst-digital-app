@@ -38,6 +38,7 @@ public class LoginController {
             Usuario usuarioLogueado = user.get();
 
             session.setAttribute("usuarioLogueado", usuarioLogueado);
+            session.setAttribute("horaInicioSesion", java.time.LocalDateTime.now());
 
             if (usuarioLogueado.getRol().getNombre().equals("RRHH")) {
                 return "redirect:/actividades/rrhh";
