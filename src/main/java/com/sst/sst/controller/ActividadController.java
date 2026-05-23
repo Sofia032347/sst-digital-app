@@ -85,13 +85,13 @@ public class ActividadController {
     }
 
     // --- REPORTES ---
+    // --- REPORTES ACTUALIZADO CON AGRUPACIÓN DIARIA ---
     @GetMapping("/reportes")
     public String verReportes(
             @RequestParam(value = "periodo", defaultValue = "HOY") String periodo,
             @RequestParam(value = "fechaRef", required = false) String fechaRef,
             Model model) {
 
-        // 1. Determinar la fecha de referencia (si no viene, usar hoy)
         LocalDate fechaReferencia = (fechaRef != null && !fechaRef.isEmpty())
                 ? LocalDate.parse(fechaRef)
                 : LocalDate.now();
@@ -99,7 +99,6 @@ public class ActividadController {
         LocalDateTime fechaInicio;
         LocalDateTime fechaFin;
 
-        // 2. Configurar rangos según el periodo
         switch (periodo.toUpperCase()) {
             case "DIA":
                 fechaInicio = fechaReferencia.atStartOfDay();
@@ -124,69 +123,63 @@ public class ActividadController {
         List<Actividad> actividadesBD = actividadRepository.findByFechaBetween(fechaInicio, fechaFin);
         List<Map<String, Object>> datosReporte = new ArrayList<>();
 
-        // 3. Procesar datos (Si es HOY o DIA, mostramos detalle. Si es SEMANA/MES, agrupamos)
         if ("HOY".equals(periodo) || "DIA".equals(periodo)) {
+            // Detalle individual (como lo tenías)
             for (Actividad act : actividadesBD) {
                 Map<String, Object> fila = new HashMap<>();
                 fila.put("nombre", act.getUsuario().getNombre());
-                fila.put("rol", act.getUsuario().getRol().getNombre());
-                fila.put("tiempoTotal", act.getDuracionSegundos() != null ? act.getDuracionSegundos() : 0);
-                fila.put("cantidadPausas", 1);
+                fila.put("departamento", act.getUsuario().getDepartamento());
+                fila.put("fechaHora", act.getFecha().format(DateTimeFormatter.ofPattern("HH:mm")));
+                fila.put("tiempoTotal", act.getDuracionSegundos());
                 fila.put("estado", act.getEstado());
                 datosReporte.add(fila);
             }
         } else {
-            Map<Usuario, List<Actividad>> agrupadoPorUsuario = actividadesBD.stream()
-                    .collect(Collectors.groupingBy(Actividad::getUsuario));
+            // AGRUPACIÓN POR DÍA (Para SEMANA y MES)
+            Map<Usuario, Map<LocalDate, List<Actividad>>> agrupado = actividadesBD.stream()
+                    .collect(Collectors.groupingBy(
+                            Actividad::getUsuario,
+                            Collectors.groupingBy(a -> a.getFecha().toLocalDate())
+                    ));
 
-            for (Map.Entry<Usuario, List<Actividad>> entrada : agrupadoPorUsuario.entrySet()) {
-                Usuario usuario = entrada.getKey();
-                List<Actividad> pausasDelUsuario = entrada.getValue();
+            for (var entryUsuario : agrupado.entrySet()) {
+                Usuario u = entryUsuario.getKey();
+                for (var entryDia : entryUsuario.getValue().entrySet()) {
+                    LocalDate fecha = entryDia.getKey();
+                    List<Actividad> acts = entryDia.getValue();
 
-                int sumaTiempo = pausasDelUsuario.stream()
-                        .filter(act -> "COMPLETADA".equals(act.getEstado()))
-                        .mapToInt(act -> act.getDuracionSegundos() != null ? act.getDuracionSegundos() : 0)
-                        .sum();
+                    // 1. Calcular Rango de Horas (ej: 08:00 - 16:00)
+                    LocalTime minHora = acts.stream().map(a -> a.getFecha().toLocalTime()).min(LocalTime::compareTo).get();
+                    LocalTime maxHora = acts.stream().map(a -> a.getFecha().toLocalTime()).max(LocalTime::compareTo).get();
+                    String rangoHoras = minHora.format(DateTimeFormatter.ofPattern("HH:mm")) + " - " +
+                            maxHora.format(DateTimeFormatter.ofPattern("HH:mm"));
 
-                int pausasRequeridas = 0;
-                if ("SEMANA".equals(periodo)) {
-                    pausasRequeridas = 6 * 4; // 6 días * 4 pausas
-                } else if ("MES".equals(periodo)) {
-                    LocalDate inicioMes = fechaReferencia.with(TemporalAdjusters.firstDayOfMonth());
-                    // Si consultamos el mes actual, contamos hasta hoy. Si es un mes pasado, hasta el fin de mes.
-                    LocalDate finCalculo = (fechaReferencia.getMonth() == LocalDate.now().getMonth()) ? LocalDate.now() : fechaReferencia.with(TemporalAdjusters.lastDayOfMonth());
+                    // 2. Sumar tiempo y contar completadas
+                    int sumaTiempo = acts.stream()
+                            .filter(a -> "COMPLETADA".equals(a.getEstado()))
+                            .mapToInt(a -> a.getDuracionSegundos() != null ? a.getDuracionSegundos() : 0).sum();
 
-                    long diasLaboralesAcumulados = 0;
-                    LocalDate iterador = inicioMes;
-                    while (!iterador.isAfter(finCalculo)) {
-                        if (iterador.getDayOfWeek() != DayOfWeek.SUNDAY) diasLaboralesAcumulados++;
-                        iterador = iterador.plusDays(1);
-                    }
-                    pausasRequeridas = (int) (diasLaboralesAcumulados * 4);
+                    long completadas = acts.stream().filter(a -> "COMPLETADA".equals(a.getEstado())).count();
+
+                    Map<String, Object> fila = new HashMap<>();
+                    fila.put("nombre", u.getNombre());
+                    fila.put("departamento", u.getDepartamento());
+                    fila.put("fechaDia", fecha.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+                    fila.put("rangoHoras", rangoHoras);
+                    fila.put("tiempoTotal", sumaTiempo);
+                    fila.put("cantidadPausas", (int) completadas);
+                    fila.put("estado", (completadas >= 4) ? "COMPLETO" : "INCOMPLETO");
+                    datosReporte.add(fila);
                 }
-
-                long pausasCompletadas = pausasDelUsuario.stream()
-                        .filter(act -> "COMPLETADA".equals(act.getEstado()))
-                        .count();
-
-                Map<String, Object> fila = new HashMap<>();
-                fila.put("nombre", usuario.getNombre());
-                fila.put("rol", usuario.getRol().getNombre());
-                fila.put("tiempoTotal", sumaTiempo);
-                fila.put("cantidadPausas", (int) pausasCompletadas);
-                fila.put("pausasRequeridas", pausasRequeridas);
-                fila.put("estado", (pausasCompletadas >= pausasRequeridas) ? "COMPLETO" : "INCOMPLETO");
-                datosReporte.add(fila);
             }
+            // Ordenar por fecha para que sea legible
+            datosReporte.sort((a, b) -> b.get("fechaDia").toString().compareTo(a.get("fechaDia").toString()));
         }
 
-        // 4. Pasar datos al modelo
         model.addAttribute("datosReporte", datosReporte);
         model.addAttribute("periodo", periodo);
         model.addAttribute("fechaRef", fechaReferencia);
-        model.addAttribute("rangoFechas",
-                fechaInicio.toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) + " - " +
-                        fechaFin.toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+        model.addAttribute("rangoFechas", fechaInicio.toLocalDate().format(DateTimeFormatter.ofPattern("dd/MM")) + " - " + fechaFin.toLocalDate().format(DateTimeFormatter.ofPattern("dd/MM")));
 
         return "rrhh/reportes";
     }

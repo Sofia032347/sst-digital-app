@@ -81,31 +81,33 @@
     </div>
 
     <div class="table-responsive shadow-sm rounded mt-4">
-        <table class="table table-hover mb-0 bg-white">
-            <thead class="table-dark">
+        <table class="table table-hover mb-0">
+            <thead>
             <tr>
                 <th>Empleado</th>
                 <th>Departamento</th>
-                <th>Fecha y Hora</th>
-                <th>Duración</th>
-                <th>Estado</th>
+                <th th:text="${periodo == 'HOY' || periodo == 'DIA'} ? 'Hora' : 'Día'">Fecha</th>
+                <th th:text="${periodo == 'HOY' || periodo == 'DIA'} ? 'Estado' : 'Rango de Horas'">Detalle</th>
+                <th>Duración Total</th>
+                <th th:if="${periodo != 'HOY' && periodo != 'DIA'}">Cumplimiento</th>
             </tr>
             </thead>
             <tbody>
-            <tr th:each="act : ${listaActividades}">
-                <td th:text="${act.usuario.nombre}" class="fw-bold"></td>
-                <td th:text="${act.usuario.departamento}"></td>
-                <td th:text="${#temporals.format(act.fecha, 'dd/MM/yyyy HH:mm')}"></td>
-                <td th:text="${act.duracionSegundos + ' seg'}"></td>
-                <td>
-                    <span th:if="${act.estado == 'EN_PROCESO'}" class="badge bg-warning text-dark">En Proceso <i class="bi bi-hourglass-split"></i></span>
-                    <span th:if="${act.estado == 'COMPLETADA'}" class="badge bg-success">Completada <i class="bi bi-check-lg"></i></span>
-                    <span th:if="${act.estado == 'INCOMPLETA'}" class="badge bg-danger">Incompleta <i class="bi bi-x-lg"></i></span>
-                    <span th:if="${act.estado == 'CANCELADA'}" class="badge bg-secondary">Cancelada <i class="bi bi-slash-circle"></i></span>
+            <tr th:each="fila : ${datosReporte}">
+                <td th:text="${fila.nombre}" class="fw-bold"></td>
+                <td th:text="${fila.departamento}"></td>
+
+                <td th:text="${fila.fechaHora != null ? fila.fechaHora : fila.fechaDia}"></td>
+
+                <td th:text="${fila.rangoHoras != null ? fila.rangoHoras : fila.estado}"></td>
+
+                <td th:text="${fila.tiempoTotal + ' seg'}"></td>
+
+                <td th:if="${fila.cantidadPausas != null}">
+                <span th:text="${fila.cantidadPausas + ' / 4'}"
+                      class="badge"
+                      th:classappend="${fila.estado == 'COMPLETO' ? 'bg-success' : 'bg-warning text-dark'}"></span>
                 </td>
-            </tr>
-            <tr th:if="${listaActividades.isEmpty()}">
-                <td colspan="5" class="text-center py-4 text-muted">No hay registros para este periodo.</td>
             </tr>
             </tbody>
         </table>
