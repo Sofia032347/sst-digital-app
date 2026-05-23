@@ -620,9 +620,36 @@ function cancelarEjercicio() {
     procesarCancelacionYSalida();
 }
 
+// --- 7. INICIO Y CONTROLADORES ---
+
+console.log("SST Digital: Script cargado completamente.");
+
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Interceptar el botón "Volver" (id="btnVolver")
+    console.log("SST Digital: DOM listo, inicializando componentes...");
+
+    // 1. Verificación de librerías
+    if (typeof Camera === 'undefined' || typeof Pose === 'undefined') {
+        console.error("❌ ERROR: MediaPipe no está cargado. Revisa los scripts en el HTML.");
+        return;
+    }
+
+    // 2. Encendido de la cámara
+    console.log("SST Digital: Intentando encender cámara...");
+    camera.start()
+        .then(() => {
+            console.log("✅ Cámara encendida con éxito.");
+            const camStatus = document.querySelector("#cameraStatus");
+            if (camStatus) camStatus.style.display = "none";
+        })
+        .catch(err => {
+            console.error("❌ Error al iniciar cámara:", err);
+            aiStatus.innerHTML = '<span class="badge bg-danger">Error de cámara</span>';
+        });
+
+    // 3. Interceptores de salida dinámicos (Para RRHH y Empleado)
     const btnVolver = document.getElementById('btnVolver');
+    const formLogout = document.getElementById('formLogout');
+
     if (btnVolver) {
         btnVolver.addEventListener('click', (e) => {
             if (ejercicioActivo) {
@@ -630,9 +657,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 procesarCancelacionYSalida(btnVolver.href);
             }
         });
+        console.log("Botón Volver detectado y protegido.");
     }
 
-    const formLogout = document.getElementById('formLogout');
     if (formLogout) {
         formLogout.addEventListener('submit', (e) => {
             if (ejercicioActivo) {
@@ -640,5 +667,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 procesarCancelacionYSalida(null, formLogout);
             }
         });
+        console.log("Formulario de Logout detectado y protegido.");
     }
+
+    // 4. Inicializar notificaciones y recordatorios
+    if (window.Notification && Notification.permission !== "granted") {
+        Notification.requestPermission();
+    }
+    iniciarTemporizadorRecordatorio();
 });
