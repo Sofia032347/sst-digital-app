@@ -23,7 +23,11 @@
 
     <div class="nav-links">
         <a th:href="@{/usuarios}" class="d-none d-md-inline">Gestionar Usuarios</a>
-        <a th:href="@{/logout}" class="btn-logout">Salir</a>
+        <form th:action="@{/logout}" method="post" id="formLogout" class="d-inline">
+            <button type="submit" class="btn-logout" style="border: none; cursor: pointer;">
+                <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
+            </button>
+        </form>
     </div>
 </nav>
 

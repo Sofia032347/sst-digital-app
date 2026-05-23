@@ -21,8 +21,10 @@
         <span class="navbar-brand mb-0 h1 fs-6 fs-md-4 text-truncate">SST - Módulo de Salud</span>
         <div class="d-flex align-items-center gap-2">
             <span class="text-white small d-none d-sm-inline">Hola, <strong th:text="${empleado.nombre}" class="text-warning">Nombre</strong></span>
-            <form th:action="@{/logout}" method="post" class="m-0">
-                <button type="submit" class="btn btn-danger btn-sm">Salir</button>
+            <form th:action="@{/logout}" method="post" id="formLogout" class="d-inline">
+                <button type="submit" class="btn-logout" style="border: none; cursor: pointer;">
+                    <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
+                </button>
             </form>
         </div>
     </div>
