@@ -151,19 +151,6 @@ function enviarAlertaPausaActiva() {
     }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    if (window.Notification && Notification.permission !== "granted" && Notification.permission !== "denied") {
-        Notification.requestPermission();
-    }
-
-    iniciarTemporizadorRecordatorio();
-
-    camera.start().then(() => {
-        let camStatus = document.querySelector("#cameraStatus");
-        if (camStatus) camStatus.style.display = "none";
-    });
-});
-
 // --- 4. LÓGICA PRINCIPAL Y ALERTA VISUAL ---
 function evaluarPosturaYDibujar(results) {
     if (canvasElement.width !== video.videoWidth && video.videoWidth > 0) {
@@ -244,9 +231,6 @@ function actualizarHistoriales(puntos) {
     if (historialCodosY.length > HISTORIAL_MAX) historialCodosY.shift();
 }
 
-// ============================================================
-// --- FUNCIÓN PRINCIPAL DE VALIDACIÓN ---
-// ============================================================
 function validarMovimientoEspecifico(puntos) {
     const nariz            = puntos[0];
     const orejaIzquierda   = puntos[7];
@@ -410,28 +394,19 @@ function validarMovimientoEspecifico(puntos) {
     }
     else if (indiceEjercicioActual === 9) {
         if (indiceFaseActual === 0) {
-            // Tapar los ojos: manos juntas en el centro a la altura de la cara
             return Math.abs(munecaDerecha.y - nariz.y) < 0.15 &&
                 Math.abs(munecaIzquierda.y - nariz.y) < 0.15 &&
-                Math.abs(munecaDerecha.x - munecaIzquierda.x) < 0.20; // Manos muy juntas
+                Math.abs(munecaDerecha.x - munecaIzquierda.x) < 0.20;
         }
         if (indiceFaseActual === 1) {
-            // Masajear sienes: manos a la altura de las orejas PERO separadas
             const aLaAlturaDeOrejas = Math.abs(munecaDerecha.y - orejaDerecha.y) < 0.15 &&
                 Math.abs(munecaIzquierda.y - orejaIzquierda.y) < 0.15;
-
-            // La clave está aquí: obligamos a que haya una distancia mayor entre las muñecas
-            // para asegurar que están a los costados de la cabeza y no en el centro.
             const manosSeparadas = Math.abs(munecaDerecha.x - munecaIzquierda.x) > 0.25;
-
             return aLaAlturaDeOrejas && manosSeparadas;
         }
         if (indiceFaseActual === 2) {
-            // Bajar las manos y relajar
             const movimiento = Math.abs(nariz.x - ultimaPosicionNariz.x) + Math.abs(nariz.y - ultimaPosicionNariz.y);
             ultimaPosicionNariz = { x: nariz.x, y: nariz.y };
-
-            // Verificamos que bajó las manos por debajo de los hombros
             return munecaDerecha.y > hombroDerecho.y + 0.1 &&
                 munecaIzquierda.y > hombroIzquierdo.y + 0.1 &&
                 movimiento < 0.010;
@@ -567,57 +542,72 @@ function siguienteEjercicio() {
     aiStatus.innerHTML = '<i class="bi bi-hourglass-split"></i> IA Esperando iniciar...';
 }
 
-// --- 6. FUNCIONES DE PAUSAR Y CANCELAR CON MODAL (SWEETALERT2) ---
+// --- 6. FUNCIONES DE PAUSAR Y CANCELAR (ACTUALIZADAS) ---
 function pausarEjercicio() {
     if (!ejercicioActivo) return;
-
     estaPausado = true;
 
     Swal.fire({
         title: 'Atención',
         text: 'Las pausas activas han sido pausadas.',
         icon: 'info',
-        showCancelButton: false,
         confirmButtonColor: '#185FA5',
         confirmButtonText: '▶ Reanudar',
-        allowOutsideClick: false,
-        allowEscapeKey: false
+        allowOutsideClick: false
     }).then((result) => {
         if (result.isConfirmed) {
             estaPausado = false;
             tiempoUltimoFrame = Date.now();
-
-            if (aiStatus) {
-                aiStatus.className = "badge bg-info text-dark fs-5 p-2 shadow-sm";
-                aiStatus.innerHTML = '<i class="bi bi-play-circle-fill"></i> Reanudando...';
-            }
+            aiStatus.innerHTML = '<i class="bi bi-play-circle-fill"></i> Reanudando...';
         }
     });
 }
 
-function cancelarEjercicio() {
+function procesarCancelacionYSalida(urlDestino = null, formulario = null) {
+    if (!ejercicioActivo) {
+        if (formulario) formulario.submit();
+        else if (urlDestino) window.location.href = urlDestino;
+        return;
+    }
+
     estaPausado = true;
 
     Swal.fire({
-        title: '¿Estás seguro?',
-        text: 'La pausa activa quedará registrada como Incompleta.',
+        title: '¿Abandonar la pausa activa?',
+        text: 'Si sales ahora, la actividad se registrará como INCOMPLETA.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Sí, cancelar',
-        cancelButtonText: 'Seguir con el ejercicio',
+        confirmButtonText: '<i class="bi bi-x-circle"></i> Sí, salir',
+        cancelButtonText: 'Continuar ejercicio',
         allowOutsideClick: false
     }).then((result) => {
         if (result.isConfirmed) {
-            fetch(`/actividades/cancelar-pausa?ejercicios=${indiceEjercicioActual}`, { method: 'POST' })
+            Swal.fire({
+                title: 'Guardando progreso...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            fetch('/actividades/cancelar-pausa', { method: 'POST' })
                 .then(() => {
-                    const btnVolver = document.querySelector('a.btn-outline-secondary');
-                    const urlVolver = btnVolver ? btnVolver.getAttribute('href') : '/actividades/empleado';
-                    window.location.href = urlVolver;
+                    if (formulario) {
+                        formulario.submit();
+                    } else if (urlDestino) {
+                        window.location.href = urlDestino;
+                    } else {
+
+                        const btnVolver = document.getElementById('btnVolver');
+                        if (btnVolver && btnVolver.href) {
+                            window.location.href = btnVolver.href;
+                        } else {
+                            window.location.href = "/";
+                        }
+                    }
                 })
                 .catch(() => {
-                    window.location.href = '/actividades/empleado';
+                    window.location.href = "/";
                 });
         } else {
             estaPausado = false;
@@ -625,3 +615,30 @@ function cancelarEjercicio() {
         }
     });
 }
+
+function cancelarEjercicio() {
+    procesarCancelacionYSalida();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Interceptar el botón "Volver" (id="btnVolver")
+    const btnVolver = document.getElementById('btnVolver');
+    if (btnVolver) {
+        btnVolver.addEventListener('click', (e) => {
+            if (ejercicioActivo) {
+                e.preventDefault();
+                procesarCancelacionYSalida(btnVolver.href);
+            }
+        });
+    }
+
+    const formLogout = document.getElementById('formLogout');
+    if (formLogout) {
+        formLogout.addEventListener('submit', (e) => {
+            if (ejercicioActivo) {
+                e.preventDefault();
+                procesarCancelacionYSalida(null, formLogout);
+            }
+        });
+    }
+});

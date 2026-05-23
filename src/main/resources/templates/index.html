@@ -11,15 +11,15 @@
 
     <link rel="stylesheet" th:href="@{/css/index.css}">
 </head>
-<body class="d-flex flex-column min-vh-100 bg-light">
+<body class="d-flex flex-column min-vh-100">
 
-<header class="hero-section text-center py-5 px-3 bg-primary text-white shadow-sm" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
-    <div class="container py-4 py-md-5">
-        <h1 class="display-5 display-md-4 fw-bold mb-3 mb-md-4">Plataforma Digital Integral SST</h1>
-        <p class="lead mb-4 mb-md-5 fs-6 fs-md-5 opacity-75">Seguridad, Salud en el Trabajo y Bienestar Físico mediante IA y Tecnología Wearable.</p>
+<header class="hero-section text-center shadow-sm">
+    <div class="container">
+        <h1 class="hero-title fw-bold">Plataforma Digital Integral SST</h1>
+        <p class="hero-subtitle opacity-75">Seguridad, Salud en el Trabajo y Bienestar Físico mediante IA y Tecnología Wearable.</p>
 
-        <div class="d-grid gap-2 d-sm-block">
-            <a th:href="@{/login}" class="btn btn-light btn-lg text-primary fw-bold px-md-5 shadow-sm rounded-pill">
+        <div class="d-grid gap-2 d-sm-block mt-4">
+            <a th:href="@{/login}" class="btn-login-custom">
                 <i class="fas fa-user-circle me-2"></i> Iniciar Sesión
             </a>
         </div>
@@ -29,22 +29,22 @@
 <section class="container my-5 flex-grow-1">
     <div class="row g-4 text-center justify-content-center">
         <div class="col-12 col-md-4">
-            <div class="card h-100 p-4 card-feature shadow-sm border-0 rounded-4 transition-hover">
-                <div class="icon-box mb-3 fs-1 text-danger"><i class="fas fa-heartbeat"></i></div>
+            <div class="card h-100 card-feature shadow-sm">
+                <div class="icon-box text-danger"><i class="fas fa-heartbeat"></i></div>
                 <h4 class="fw-bold">Pausas Activas</h4>
                 <p class="text-muted mb-0">Notificaciones inteligentes basadas en tu actividad real.</p>
             </div>
         </div>
         <div class="col-12 col-md-4">
-            <div class="card h-100 p-4 card-feature shadow-sm border-0 rounded-4 transition-hover">
-                <div class="icon-box mb-3 fs-1 text-success"><i class="fas fa-video"></i></div>
+            <div class="card h-100 card-feature shadow-sm">
+                <div class="icon-box text-success"><i class="fas fa-video"></i></div>
                 <h4 class="fw-bold">Análisis Postural</h4>
                 <p class="text-muted mb-0">Visión artificial para corregir tu postura en tiempo real.</p>
             </div>
         </div>
         <div class="col-12 col-md-4">
-            <div class="card h-100 p-4 card-feature shadow-sm border-0 rounded-4 transition-hover">
-                <div class="icon-box mb-3 fs-1 text-primary"><i class="fas fa-chart-line"></i></div>
+            <div class="card h-100 card-feature shadow-sm">
+                <div class="icon-box text-primary"><i class="fas fa-chart-line"></i></div>
                 <h4 class="fw-bold">Dashboard SST</h4>
                 <p class="text-muted mb-0">Gestión unificada de indicadores de salud ocupacional.</p>
             </div>
@@ -52,9 +52,11 @@
     </div>
 </section>
 
-<footer class="text-center py-4 bg-white border-top mt-auto shadow-sm">
-    <p class="mb-1 text-dark small fw-bold">© 2026 Proyecto SST - Universidad Central</p>
-    <p class="mb-0 text-muted small">Backend API v1.0 | Status: <span class="badge bg-success shadow-sm">Online</span></p>
+<footer class="footer-section mt-auto">
+    <div class="container text-center">
+        <p class="mb-1 text-dark small fw-bold">© 2026 Proyecto SST - Universidad Central</p>
+        <p class="mb-0 text-muted small">Backend API v1.0 | Status: <span class="badge bg-success shadow-sm">Online</span></p>
+    </div>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

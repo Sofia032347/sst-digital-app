@@ -10,48 +10,48 @@
 
     <link rel="stylesheet" th:href="@{/css/empleado.css}">
 </head>
-<body class="bg-light">
+<body>
 
-<nav class="navbar navbar-dark bg-primary mb-4 shadow-sm">
-    <div class="container d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
-        <span class="navbar-brand mb-0 h1 fs-5 fs-md-4">SST Digital - Empleado</span>
+<nav class="navbar-employee shadow-sm">
+    <div class="nav-container">
+        <strong class="brand">SST Digital - Empleado</strong>
 
-        <div class="d-flex flex-column flex-sm-row align-items-center gap-3 text-white">
-            <div class="user-greeting text-center text-sm-start">
-                Bienvenido(a), <strong class="user-name text-warning" th:text="${empleado.nombre}">Nombre del Empleado</strong>
-            </div>
+        <div class="user-info d-none d-md-block">
+            Bienvenido, <span class="user-name" th:text="${empleado.nombre}">Nombre del Empleado</span>
+        </div>
 
-            <form th:action="@{/logout}" method="post" class="m-0 w-100 w-sm-auto">
-                <button type="submit" class="btn btn-danger btn-sm w-100">Cerrar Sesión</button>
-            </form>
+        <div class="nav-actions">
+            <a th:href="@{/logout}" class="btn-logout">
+                <i class="bi bi-box-arrow-right"></i> <span class="d-none d-sm-inline">Cerrar Sesión</span>
+            </a>
         </div>
     </div>
 </nav>
 
-<div class="container">
+<div class="container main-content">
     <div class="row justify-content-center">
-        <div class="col-12 col-md-8 col-lg-6 mt-4 mt-md-5">
+        <div class="col-12 col-lg-8">
+            <div class="card employee-card text-center shadow-lg border-0">
+                <div class="card-body p-4 p-md-5">
+                    <div class="icon-circle mb-4">
+                        <i class="bi bi-person-walking"></i>
+                    </div>
 
-            <div class="card shadow border-0 rounded-4 text-center p-4 p-md-5">
-                <div class="mb-3 d-none d-md-block">
-                    <i class="bi bi-person-workspace text-primary" style="font-size: 3rem;"></i>
-                </div>
+                    <h2 class="fw-bold text-primary">Pausa Activa</h2>
+                    <p class="text-muted fs-5 mt-3">
+                        Es momento de cuidar tu salud. Realiza tus ejercicios para mantener tu bienestar físico durante la jornada.
+                    </p>
 
-                <h2 class="text-primary fw-bold">Pausa Activa</h2>
-                <p class="text-muted mt-2">Realiza tus ejercicios de pausa activa para mantener tu salud y bienestar.</p>
+                    <div class="alert alert-info border-0 bg-light-blue mt-4 py-3">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <strong>Recomendación:</strong> Realiza una pausa activa cada 2 horas de trabajo.
+                    </div>
 
-                <div class="alert alert-info mt-3 text-start shadow-sm border-0">
-                    <i class="bi bi-info-circle-fill me-2"></i>
-                    <strong>Recomendación:</strong> Realiza una pausa activa cada 2 horas de trabajo.
-                </div>
-
-                <div class="d-grid gap-2 mt-4">
-                    <a th:href="@{/actividades/pausa-activa}" class="btn btn-success btn-lg shadow">
-                        <i class="bi bi-play-fill me-1"></i> Iniciar Pausa Activa Ahora
+                    <a th:href="@{/actividades/pausa-activa}" class="btn btn-success btn-lg btn-start-pausa mt-4 shadow">
+                        <i class="bi bi-play-fill"></i> Iniciar Pausa Activa Ahora
                     </a>
                 </div>
             </div>
-
         </div>
     </div>
 </div>

@@ -1,183 +1,158 @@
-/* --- Estilos Base --- */
 body {
-    font-family: 'Segoe UI', sans-serif;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     margin: 0;
-    background-color: #f8f9fa;
+    background-color: #f4f7f6;
+    color: #333;
 }
 
-/* --- Barra de Navegación --- */
-nav {
+.navbar-custom {
     background: #185FA5;
     color: white;
-    padding: 0.5rem 1rem; /* <-- CORREGIDO: Menos relleno vertical para hacer la barra más delgada */
+    padding: 0.75rem 1.5rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
-/* Contenedor del botón en la barra de RRHH */
-.action-container {
-    margin: 0; /* <-- CORREGIDO: Quitamos el margen que empujaba la barra hacia abajo */
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 15px;
 }
 
 .nav-links a {
     color: white;
     text-decoration: none;
-    margin-left: 15px;
+    font-size: 14px;
 }
 
-.nav-links a:hover {
-    text-decoration: underline;
-}
-
-/* --- Contenedor Principal --- */
-.container {
-    padding: 20px;
-    max-width: 1200px;
-    margin: auto;
-}
-
-/* --- Sección de Alertas --- */
 .alert-section {
     background: #fff3cd;
     border-left: 5px solid #ffc107;
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 25px;
+    border-radius: 8px;
 }
 
-.alert-section h3 {
-    margin-top: 0;
+.badge-pendiente {
+    background: rgba(133, 100, 4, 0.1);
     color: #856404;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    border: 1px solid rgba(133, 100, 4, 0.2);
 }
 
-/* --- Filtros y Botones --- */
 .toolbar {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
     align-items: center;
 }
 
 .btn {
-    padding: 10px 15px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    text-decoration: none;
-    font-size: 14px;
-    display: inline-block;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: all 0.2s;
 }
 
-/* Botón Naranja de Pausa Activa (RRHH) */
 .btn-pausa {
     background-color: #e67e22;
     color: white;
-    font-weight: bold;
-    font-size: 16px;
-    padding: 12px 20px;
-    transition: background-color 0.2s ease;
+    font-size: 14px;
+    border: none;
 }
 
 .btn-pausa:hover {
-    background-color: #d35400; /* Naranja más oscuro */
+    background-color: #d35400;
     color: white;
-}
-
-.btn-blue {
-    background: #185FA5;
-    color: white;
+    transform: translateY(-1px);
 }
 
 .btn-green {
     background: #28a745;
     color: white;
-}
-
-.btn-green:hover {
-    background: #218838;
+    border: none;
 }
 
 .btn-filter {
-    background: #e2e6ea;
-    color: #333;
+    background: #e9ecef;
+    color: #495057;
     margin-right: 5px;
-}
-
-.btn-filter:hover {
-    background: #dae0e5;
+    border: 1px solid #dee2e6;
 }
 
 .btn-filter.active {
     background: #185FA5;
     color: white;
+    border-color: #185FA5;
 }
 
-/* --- Botón de Cerrar Sesión --- */
 .btn-logout {
-    background-color: #dc3545; /* Fondo rojo */
-    color: #ffffff !important; /* Texto blanco (importante para sobreescribir el enlace de nav-links) */
-    padding: 8px 16px;
-    border-radius: 5px;
-    text-decoration: none;
+    background-color: #dc3545;
+    color: white !important;
+    padding: 6px 14px;
+    border-radius: 6px;
     font-weight: bold;
-    display: inline-block;
-    transition: background-color 0.3s ease;
-    margin-left: 15px; /* Mantiene la separación con los otros enlaces */
 }
 
-.btn-logout:hover {
-    background-color: #c82333; /* Rojo más oscuro al pasar el mouse */
-    text-decoration: none !important;
+.table-responsive {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
 }
 
-/* --- Tabla de Registros --- */
 table {
     width: 100%;
-    border-collapse: collapse;
-    background: white;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    border-radius: 4px;
-    overflow: hidden; /* Para que el border-radius aplique con el header */
+    margin-bottom: 0 !important;
 }
 
-th, td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid #dee2e6;
+thead {
+    background-color: #f8f9fa;
 }
 
 th {
-    background: #f1f3f5;
-    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #666;
+    border-bottom: 2px solid #dee2e6 !important;
 }
 
-.text-center {
-    text-align: center;
-}
-
-/* --- Etiquetas de Estado (Badges) --- */
 .badge {
-    padding: 5px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    background: #d4edda;
-    color: #155724;
-    font-weight: bold;
+    padding: 6px 12px;
+    border-radius: 50px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
 }
 
-/* --- NUEVOS ESTILOS PARA ESTADOS DE PAUSA (Añadidos sin modificar lo anterior) --- */
-.badge.bg-warning {
-    background-color: #ffc107;
-    color: #212529; /* text-dark */
-}
+.bg-warning { background-color: #ffc107 !important; }
+.bg-success { background-color: #198754 !important; }
+.bg-danger { background-color: #dc3545 !important; }
 
-.badge.bg-success {
-    background-color: #198754;
-    color: #ffffff;
-}
+@media (max-width: 768px) {
+    .navbar-custom {
+        flex-direction: column;
+        text-align: center;
+        padding: 1rem;
+    }
 
-.badge.bg-danger {
-    background-color: #dc3545;
-    color: #ffffff;
+    .toolbar {
+        align-items: stretch;
+    }
+
+    .filters {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .btn-filter {
+        flex: 1;
+        text-align: center;
+        font-size: 12px;
+        padding: 8px 4px;
+    }
 }
