@@ -1,3 +1,4 @@
+
 package com.sst.sst.repository;
 
 import com.sst.sst.model.Usuario;
@@ -8,5 +9,8 @@ import java.util.Optional;
 
 @Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
-    Optional<Usuario> findByEmailAndPassword(String email, String password);
+
+    // Buscar un usuario utilizando únicamente su correo electrónico
+    Optional<Usuario> findByEmail(String email);
+
 }

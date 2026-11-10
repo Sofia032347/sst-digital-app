@@ -9,12 +9,15 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -33,15 +36,19 @@ public class ActividadController {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    private static final int OBJETIVO_DIARIO = 4;
+    private static final int DURACION_MINIMA_RUTINA_SEGUNDOS = 600;
+
     // --- DASHBOARD RRHH ---
     @GetMapping("/rrhh")
     public String mostrarDashboard(
             @RequestParam(required = false) String filtro,
             @RequestParam(value = "fechaRef", required = false) String fechaRef,
             Model model,
-            HttpSession session) {
+            HttpSession session,
+            Authentication authentication) {
 
-        if (session.getAttribute("usuarioLogueado") == null) return "redirect:/login";
+        requerirRRHH(authentication);
 
         LocalDate fechaReferencia = (fechaRef != null && !fechaRef.isEmpty())
                 ? LocalDate.parse(fechaRef)
@@ -102,7 +109,9 @@ public class ActividadController {
         }
 
         // Ordenar por fecha descendente
-        datosAgrupados.sort((a, b) -> b.get("fechaDia").toString().compareTo(a.get("fechaDia").toString()));
+        datosAgrupados.sort(Comparator.comparing(
+                a -> LocalDate.parse(a.get("fechaDia").toString(), DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                Comparator.reverseOrder()));
 
         // Alertas de hoy real
         List<Usuario> pendientes = obtenerPendientesHoy(actividadRepository.findByFechaBetween(LocalDate.now().atStartOfDay(), LocalDate.now().atTime(LocalTime.MAX)));
@@ -121,7 +130,10 @@ public class ActividadController {
     public String verReportes(
             @RequestParam(value = "periodo", defaultValue = "HOY") String periodo,
             @RequestParam(value = "fechaRef", required = false) String fechaRef,
-            Model model) {
+            Model model,
+            Authentication authentication) {
+
+        requerirRRHH(authentication);
 
         LocalDate fechaReferencia = (fechaRef != null && !fechaRef.isEmpty())
                 ? LocalDate.parse(fechaRef)
@@ -204,7 +216,9 @@ public class ActividadController {
                 }
             }
             // Ordenar por fecha para que sea legible
-            datosReporte.sort((a, b) -> b.get("fechaDia").toString().compareTo(a.get("fechaDia").toString()));
+            datosReporte.sort(Comparator.comparing(
+                    a -> LocalDate.parse(a.get("fechaDia").toString(), DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                    Comparator.reverseOrder()));
         }
 
         model.addAttribute("datosReporte", datosReporte);
@@ -229,7 +243,9 @@ public class ActividadController {
 
         model.addAttribute("empleado", logueado);
         model.addAttribute("actividadesHoy", actividadesHoy);
-        model.addAttribute("pausaRealizadaHoy", actividadesHoy.stream().anyMatch(a -> "COMPLETADA".equals(a.getEstado())));
+        model.addAttribute("pausaRealizadaHoy", actividadesHoy.stream()
+                .filter(a -> Actividad.ESTADO_COMPLETADA.equals(a.getEstado()))
+                .count() >= OBJETIVO_DIARIO);
 
         return "empleado/empleado";
     }
@@ -255,7 +271,9 @@ public class ActividadController {
         List<Actividad> actividadesHoy = actividadRepository.findByUsuarioIdAndFechaBetween(
                 logueado.getId(), inicioHoy, finHoy);
 
-        boolean yaCompleto = actividadesHoy.stream().anyMatch(a -> "COMPLETADA".equals(a.getEstado()));
+        boolean yaCompleto = actividadesHoy.stream()
+                .filter(a -> Actividad.ESTADO_COMPLETADA.equals(a.getEstado()))
+                .count() >= OBJETIVO_DIARIO;
         boolean tieneIncompleta = actividadesHoy.stream().anyMatch(a -> "INCOMPLETA".equals(a.getEstado()));
 
         String estado;
@@ -289,11 +307,8 @@ public class ActividadController {
 
     // --- DESCARGAR REPORTE AGRUPADO (CSV PROFESIONAL) ---
     @GetMapping("/descargar")
-    public void descargarCSV(HttpServletResponse response, HttpSession session) throws IOException {
-        if (session.getAttribute("usuarioLogueado") == null) {
-            response.sendRedirect("/login");
-            return;
-        }
+    public void descargarCSV(HttpServletResponse response, Authentication authentication) throws IOException {
+        requerirRRHH(authentication);
 
         // Configuración de respuesta para CSV
         response.setContentType("text/csv; charset=UTF-8");
@@ -348,10 +363,8 @@ public class ActividadController {
 
     // --- VISTA PAUSA ACTIVA ---
     @GetMapping("/pausa-activa")
-    public String mostrarPausaActiva(HttpSession session, Model model) {
-        Usuario logueado = (Usuario) session.getAttribute("usuarioLogueado");
-        if (logueado == null) return "redirect:/login";
-
+    public String mostrarPausaActiva(Authentication authentication, Model model) {
+        Usuario logueado = requerirUsuario(authentication);
         model.addAttribute("empleado", logueado);
         return "pausa-activa";
     }
@@ -359,9 +372,33 @@ public class ActividadController {
     // --- INICIAR PAUSA ---
     @PostMapping("/iniciar-pausa")
     @ResponseBody
-    public ResponseEntity<Long> iniciarPausa(HttpSession session) {
-        Usuario logueado = (Usuario) session.getAttribute("usuarioLogueado");
-        if (logueado == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    public ResponseEntity<Long> iniciarPausa(HttpSession session, Authentication authentication) {
+        Usuario logueado = requerirUsuario(authentication);
+
+        // Evitar abrir dos actividades mientras la anterior sigue activa.
+        Long idActual = (Long) session.getAttribute("idActividadActual");
+        if (idActual != null) {
+            Optional<Actividad> existente = actividadRepository.findById(idActual);
+            if (existente.isPresent()) {
+                validarPropietario(existente.get(), logueado);
+                if (Actividad.ESTADO_EN_PROCESO.equals(existente.get().getEstado())) {
+                    return ResponseEntity.ok(idActual);
+                }
+            }
+            session.removeAttribute("idActividadActual");
+        }
+
+        // La meta diaria definida por SST Digital es de cuatro pausas.
+        LocalDate hoy = LocalDate.now();
+        long completadasHoy = actividadRepository.findByUsuarioIdAndFechaBetween(
+                        logueado.getId(), hoy.atStartOfDay(), hoy.atTime(LocalTime.MAX))
+                .stream()
+                .filter(a -> Actividad.ESTADO_COMPLETADA.equals(a.getEstado()))
+                .count();
+        if (completadasHoy >= OBJETIVO_DIARIO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ya alcanzaste el objetivo diario de pausas activas");
+        }
 
         Actividad nuevaActividad = new Actividad();
         nuevaActividad.setUsuario(logueado);
@@ -372,75 +409,128 @@ public class ActividadController {
 
         Actividad guardada = actividadRepository.save(nuevaActividad);
         session.setAttribute("idActividadActual", guardada.getId());
-
         return ResponseEntity.ok(guardada.getId());
     }
 
-    // --- FINALIZAR PAUSA (COMPLETADA) ---
-    @GetMapping("/finalizar-pausa")
-    public String finalizarPausa(HttpSession session) {
-        Usuario logueado = (Usuario) session.getAttribute("usuarioLogueado");
-        if (logueado == null) return "redirect:/login";
+    // --- FINALIZAR PAUSA: POST CON CSRF Y VALIDACIÓN DE PROPIETARIO ---
+    @PostMapping("/finalizar-pausa")
+    @ResponseBody
+    public ResponseEntity<String> finalizarPausa(HttpSession session, Authentication authentication) {
+        Actividad actividad = obtenerActividadActualAutorizada(session, authentication);
+        comprobarEnProceso(actividad);
 
-        Long idActividad = (Long) session.getAttribute("idActividadActual");
-
-        if (idActividad != null) {
-            Actividad actividadExistente = actividadRepository.findById(idActividad).orElse(null);
-            if (actividadExistente != null) {
-                actividadExistente.setDuracionSegundos(600);
-                actividadExistente.setEjerciciosCompletados(10);
-                actividadExistente.setValidadoIA(true);
-                actividadExistente.setEstado(Actividad.ESTADO_COMPLETADA);
-                actividadRepository.save(actividadExistente);
-            }
-            session.removeAttribute("idActividadActual");
+        int segundos = calcularSegundosTranscurridos(actividad);
+        if (segundos < DURACION_MINIMA_RUTINA_SEGUNDOS) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La rutina aún no cumple el tiempo mínimo de 10 minutos");
         }
 
-        return "RRHH".equals(logueado.getRol().getNombre()) ? "redirect:/actividades/rrhh" : "redirect:/actividades/empleado";
+        actividad.setDuracionSegundos(segundos);
+        // Sin seguimiento verificable de fases en el servidor, no afirmar
+        // que los diez ejercicios fueron validados automáticamente.
+        actividad.setEjerciciosCompletados(0);
+        actividad.setValidadoIA(false);
+        // COMPLETADA = finalización declarada por la interfaz; NO certificación por IA.
+        actividad.setEstado(Actividad.ESTADO_COMPLETADA);
+        actividadRepository.save(actividad);
+        session.removeAttribute("idActividadActual");
+
+        return ResponseEntity.ok("Pausa registrada como COMPLETADA (sin validación IA)");
     }
 
-    // --- CANCELAR PAUSA (BOTÓN CANCELAR - INCOMPLETA) ---
+    // --- BOTÓN CANCELAR: REGISTRAR INCOMPLETA ---
     @PostMapping("/boton-cancelar")
     @ResponseBody
-    public ResponseEntity<String> botonCancelarPausa(HttpSession session) {
-        Long idActividad = (Long) session.getAttribute("idActividadActual");
+    public ResponseEntity<String> botonCancelarPausa(HttpSession session, Authentication authentication) {
+        Actividad actividad = obtenerActividadActualAutorizada(session, authentication);
+        comprobarEnProceso(actividad);
 
-        if (idActividad != null) {
-            Actividad actividad = actividadRepository.findById(idActividad).orElse(null);
-            if (actividad != null) {
-                actividad.setEstado(Actividad.ESTADO_INCOMPLETA);
-                if (actividad.getFecha() != null) {
-                    long segundos = java.time.Duration.between(actividad.getFecha(), java.time.LocalDateTime.now()).getSeconds();
-                    actividad.setDuracionSegundos((int) segundos);
-                }
-                actividadRepository.save(actividad);
-            }
-            session.removeAttribute("idActividadActual");
-            return ResponseEntity.ok("Registrada como INCOMPLETA");
-        }
-        return ResponseEntity.badRequest().build();
+        actividad.setDuracionSegundos(calcularSegundosTranscurridos(actividad));
+        actividad.setEstado(Actividad.ESTADO_INCOMPLETA);
+        actividadRepository.save(actividad);
+        session.removeAttribute("idActividadActual");
+        return ResponseEntity.ok("Registrada como INCOMPLETA");
     }
 
-    // --- SALIDA FORZADA (LOGOUT/VOLVER - CANCELADA) ---
+    // --- SALIDA FORZADA (LOGOUT/VOLVER): REGISTRAR CANCELADA ---
     @PostMapping("/cancelar-pausa")
     @ResponseBody
-    public ResponseEntity<String> cancelarPausaForzada(HttpSession session) {
-        Long idActividad = (Long) session.getAttribute("idActividadActual");
-        if (idActividad != null) {
-            Actividad actividad = actividadRepository.findById(idActividad).orElse(null);
-            if (actividad != null) {
-                actividad.setEstado(Actividad.ESTADO_CANCELADA);
-                actividadRepository.save(actividad);
-            }
-            session.removeAttribute("idActividadActual");
-        }
+    public ResponseEntity<String> cancelarPausaForzada(HttpSession session, Authentication authentication) {
+        Actividad actividad = obtenerActividadActualAutorizada(session, authentication);
+        comprobarEnProceso(actividad);
+
+        actividad.setDuracionSegundos(calcularSegundosTranscurridos(actividad));
+        actividad.setEstado(Actividad.ESTADO_CANCELADA);
+        actividadRepository.save(actividad);
+        session.removeAttribute("idActividadActual");
         return ResponseEntity.ok("Registrada como CANCELADA");
+    }
+
+    // --- MÉTODOS DE SEGURIDAD REUTILIZADOS POR LOS ENDPOINTS ---
+    private Usuario requerirUsuario(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Inicia sesión");
+        }
+        return usuarioRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "La cuenta autenticada ya no existe"));
+    }
+
+    private void requerirRRHH(Authentication authentication) {
+        requerirUsuario(authentication);
+        boolean esRRHH = authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_RRHH".equals(a.getAuthority()));
+        if (!esRRHH) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Solo RRHH puede consultar esta información");
+        }
+    }
+
+    private Actividad obtenerActividadActualAutorizada(
+            HttpSession session, Authentication authentication) {
+        Usuario usuario = requerirUsuario(authentication);
+        Object identificador = session.getAttribute("idActividadActual");
+        if (!(identificador instanceof Long idActividad)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No hay una pausa activa iniciada en esta sesión");
+        }
+
+        Actividad actividad = actividadRepository.findById(idActividad)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "La actividad no existe"));
+        validarPropietario(actividad, usuario);
+        return actividad;
+    }
+
+    private void validarPropietario(Actividad actividad, Usuario usuario) {
+        if (actividad.getUsuario() == null ||
+                !usuario.getId().equals(actividad.getUsuario().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Esta actividad pertenece a otro usuario");
+        }
+    }
+
+    private void comprobarEnProceso(Actividad actividad) {
+        if (!Actividad.ESTADO_EN_PROCESO.equals(actividad.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La actividad ya no está en proceso");
+        }
+    }
+
+    private int calcularSegundosTranscurridos(Actividad actividad) {
+        if (actividad.getFecha() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La actividad no tiene una fecha de inicio válida");
+        }
+        long segundos = Duration.between(actividad.getFecha(), LocalDateTime.now()).getSeconds();
+        return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, segundos));
     }
 
     // --- API PENDIENTES ---
     @GetMapping("/api/pendientes-hoy")
     @ResponseBody
-    public List<Map<String, String>> obtenerPendientesApi() {
+    public List<Map<String, String>> obtenerPendientesApi(Authentication authentication) {
+        requerirRRHH(authentication);
         LocalDateTime ahora = LocalDateTime.now();
         LocalDateTime inicioHoy = LocalDate.now().atStartOfDay();
 
