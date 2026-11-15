@@ -1,19 +1,31 @@
+
 package com.sst.sst.config;
 
+import com.sst.sst.model.RegistroAcceso;
 import com.sst.sst.model.Usuario;
+
+import com.sst.sst.repository.RegistroAccesoRepository;
 import com.sst.sst.repository.UsuarioRepository;
+
 import com.sst.sst.service.UsuarioDetailsService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import org.springframework.http.HttpStatus;
+
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+
+import org.springframework.security.web.authentication.logout
+        .HttpStatusReturningLogoutSuccessHandler;
 
 import java.time.LocalDateTime;
 
@@ -21,21 +33,21 @@ import java.time.LocalDateTime;
 public class SecurityConfig {
 
     private final UsuarioRepository usuarioRepository;
+    private final RegistroAccesoRepository registroAccesoRepository;
 
-    public SecurityConfig(UsuarioRepository usuarioRepository) {
+    public SecurityConfig(
+            UsuarioRepository usuarioRepository,
+            RegistroAccesoRepository registroAccesoRepository
+    ) {
         this.usuarioRepository = usuarioRepository;
+        this.registroAccesoRepository = registroAccesoRepository;
     }
-
-    // ============================================
-    // AUTENTICACIÓN CON BASE DE DATOS Y BCRYPT
-    // ============================================
 
     @Bean
     public AuthenticationProvider authenticationProvider(
             UsuarioDetailsService usuarioDetailsService,
             PasswordEncoder passwordEncoder
     ) {
-
         DaoAuthenticationProvider provider =
                 new DaoAuthenticationProvider(usuarioDetailsService);
 
@@ -44,9 +56,17 @@ public class SecurityConfig {
         return provider;
     }
 
-    // ============================================
-    // CONFIGURACIÓN DE SEGURIDAD HTTP
-    // ============================================
+    private boolean esPeticionAngular(
+            HttpServletRequest request
+    ) {
+        String accept = request.getHeader("Accept");
+        String requestedWith = request.getHeader("X-Requested-With");
+
+        return (
+                accept != null &&
+                        accept.contains("application/json")
+        ) || "XMLHttpRequest".equalsIgnoreCase(requestedWith);
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -59,10 +79,7 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // ====================================
-                        // 1. PÁGINAS Y RECURSOS PÚBLICOS
-                        // ====================================
-
+                        // Recursos públicos
                         .requestMatchers(
                                 "/",
                                 "/index",
@@ -77,10 +94,12 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
 
-                        // ====================================
-                        // 2. FUNCIONES EXCLUSIVAS DE RRHH
-                        // ====================================
+                        // El login necesita CSRF antes de autenticarse.
+                        .requestMatchers(
+                                "/api/auth/csrf"
+                        ).permitAll()
 
+                        // Vistas administrativas existentes
                         .requestMatchers(
                                 "/usuarios/**",
                                 "/actividades/rrhh",
@@ -89,64 +108,33 @@ public class SecurityConfig {
                                 "/actividades/api/pendientes-hoy"
                         ).hasRole("RRHH")
 
-                        // ====================================
-                        // 3. IDENTIDAD DE SESIÓN PARA ANGULAR
-                        // ====================================
+                        // Dashboard y API de RRHH
+                        .requestMatchers(
+                                "/api/rrhh/**"
+                        ).hasRole("RRHH")
 
+                        // Sesión para Angular
                         .requestMatchers(
                                 "/api/auth/me"
                         ).authenticated()
 
-                        // ====================================
-                        // 4. ESTADÍSTICAS PARA ANGULAR
-                        // ====================================
-
+                        // Resumen personal, también para RRHH
                         .requestMatchers(
                                 "/api/empleado/**"
                         ).hasAnyRole("EMPLEADO", "RRHH")
 
-                        // ====================================
-                        // 5. NOTIFICACIONES DE SST DIGITAL
-                        // ====================================
-                        //
-                        // Permite:
-                        //
-                        // GET  /api/notificaciones
-                        // GET  /api/notificaciones/pendientes
-                        // GET  /api/notificaciones/contador
-                        // GET  /api/notificaciones/vencidas
-                        //
-                        // POST /api/notificaciones/{id}/posponer
-                        //
-                        // Cada usuario solo consulta sus
-                        // propias notificaciones.
-                        // La validación de propiedad se
-                        // realiza en el servicio REST.
-                        //
-                        // CSRF permanece habilitado.
-
+                        // Notificaciones
                         .requestMatchers(
                                 "/api/notificaciones/**"
                         ).hasAnyRole("EMPLEADO", "RRHH")
 
-                        // ====================================
-                        // 6. BLOQUEAR LAS DEMÁS API
-                        // ====================================
-
+                        // Bloquear otras API
                         .requestMatchers(
                                 "/api/**"
                         ).denyAll()
 
-                        // ====================================
-                        // 7. OTRAS PÁGINAS REQUIEREN LOGIN
-                        // ====================================
-
                         .anyRequest().authenticated()
                 )
-
-                // ============================================
-                // LOGIN
-                // ============================================
 
                 .formLogin(form -> form
 
@@ -156,121 +144,123 @@ public class SecurityConfig {
                         .usernameParameter("email")
                         .passwordParameter("password")
 
-                        .failureUrl("/login?error")
+                        .successHandler((request, response, authentication) -> {
 
-                        .successHandler(
-                                (request, response, authentication) -> {
-
-                                    Usuario usuario = usuarioRepository
-                                            .findByEmail(
-                                                    authentication.getName()
+                            Usuario usuario = usuarioRepository
+                                    .findByEmail(authentication.getName())
+                                    .orElseThrow(() ->
+                                            new IllegalStateException(
+                                                    "Usuario autenticado no encontrado"
                                             )
-                                            .orElseThrow(() ->
-                                                    new IllegalStateException(
-                                                            "Usuario autenticado no encontrado"
-                                                    )
-                                            );
-
-                                    // ====================================
-                                    // COMPATIBILIDAD CON THYMELEAF
-                                    // ====================================
-
-                                    Usuario usuarioSesion = new Usuario();
-
-                                    usuarioSesion.setId(
-                                            usuario.getId()
                                     );
 
-                                    usuarioSesion.setNombre(
-                                            usuario.getNombre()
+                            // Copia sin contraseña para compatibilidad
+                            // con la aplicación Thymeleaf.
+                            Usuario usuarioSesion = new Usuario();
+
+                            usuarioSesion.setId(usuario.getId());
+                            usuarioSesion.setNombre(usuario.getNombre());
+                            usuarioSesion.setEmail(usuario.getEmail());
+                            usuarioSesion.setDepartamento(
+                                    usuario.getDepartamento()
+                            );
+                            usuarioSesion.setRol(usuario.getRol());
+
+                            HttpSession session = request.getSession(true);
+
+                            session.setAttribute(
+                                    "usuarioLogueado",
+                                    usuarioSesion
+                            );
+
+                            LocalDateTime ahora = LocalDateTime.now();
+
+                            session.setAttribute(
+                                    "horaInicioSesion",
+                                    ahora
+                            );
+
+                            // ====================================
+                            // NUEVO: REGISTRAR LOGIN EXITOSO
+                            // ====================================
+
+                            registroAccesoRepository.save(
+                                    new RegistroAcceso(usuario, ahora)
+                            );
+
+                            // Angular recibe confirmación sin HTML.
+                            if (esPeticionAngular(request)) {
+                                response.setStatus(
+                                        HttpStatus.NO_CONTENT.value()
+                                );
+                                return;
+                            }
+
+                            // Conservar redirecciones de Thymeleaf.
+                            boolean esRRHH = authentication
+                                    .getAuthorities()
+                                    .stream()
+                                    .anyMatch(a ->
+                                            "ROLE_RRHH".equals(a.getAuthority())
                                     );
 
-                                    usuarioSesion.setEmail(
-                                            usuario.getEmail()
-                                    );
+                            String destino = esRRHH
+                                    ? "/actividades/rrhh"
+                                    : "/actividades/empleado";
 
-                                    usuarioSesion.setDepartamento(
-                                            usuario.getDepartamento()
-                                    );
+                            response.sendRedirect(
+                                    request.getContextPath() + destino
+                            );
+                        })
 
-                                    usuarioSesion.setRol(
-                                            usuario.getRol()
-                                    );
+                        .failureHandler((request, response, exception) -> {
 
-                                    // Nunca guardar la contraseña
-                                    // dentro del objeto de sesión.
+                            if (esPeticionAngular(request)) {
+                                response.setStatus(
+                                        HttpStatus.UNAUTHORIZED.value()
+                                );
 
-                                    HttpSession session =
-                                            request.getSession(true);
+                                response.setContentType(
+                                        "application/json;charset=UTF-8"
+                                );
 
-                                    session.setAttribute(
-                                            "usuarioLogueado",
-                                            usuarioSesion
-                                    );
+                                response.getWriter().write(
+                                        "{\"mensaje\":\"Correo o contraseña incorrectos\"}"
+                                );
 
-                                    session.setAttribute(
-                                            "horaInicioSesion",
-                                            LocalDateTime.now()
-                                    );
+                                return;
+                            }
 
-                                    // ====================================
-                                    // REDIRECCIÓN SEGÚN EL ROL
-                                    // ====================================
-
-                                    boolean esRRHH =
-                                            authentication.getAuthorities()
-                                                    .stream()
-                                                    .anyMatch(a ->
-                                                            "ROLE_RRHH".equals(
-                                                                    a.getAuthority()
-                                                            )
-                                                    );
-
-                                    String destino = esRRHH
-                                            ? "/actividades/rrhh"
-                                            : "/actividades/empleado";
-
-                                    response.sendRedirect(
-                                            request.getContextPath() + destino
-                                    );
-                                }
-                        )
+                            response.sendRedirect(
+                                    request.getContextPath() + "/login?error"
+                            );
+                        })
 
                         .permitAll()
                 )
-
-                // ============================================
-                // CIERRE DE SESIÓN
-                // ============================================
 
                 .logout(logout -> logout
-
                         .logoutUrl("/logout")
 
-                        .logoutSuccessUrl("/index")
+                        .logoutSuccessHandler(
+                                new HttpStatusReturningLogoutSuccessHandler(
+                                        HttpStatus.NO_CONTENT
+                                )
+                        )
 
                         .invalidateHttpSession(true)
-
+                        .clearAuthentication(true)
                         .deleteCookies("JSESSIONID")
-
                         .permitAll()
                 )
 
-                // ============================================
-                // PROTECCIÓN CONTRA FIJACIÓN DE SESIÓN
-                // ============================================
-
                 .sessionManagement(session -> session
-
                         .sessionFixation(fixation ->
                                 fixation.changeSessionId()
                         )
                 );
 
-        // ============================================
-        // CSRF CONTINÚA ACTIVADO
-        // ============================================
-
+        // Mantener la protección CSRF.
         return http.build();
     }
 }

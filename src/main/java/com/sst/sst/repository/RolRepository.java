@@ -1,6 +1,15 @@
+
 package com.sst.sst.repository;
 
 import com.sst.sst.model.Rol;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-public interface RolRepository extends JpaRepository<Rol, Long> {}
+import java.util.Optional;
+
+@Repository
+public interface RolRepository
+        extends JpaRepository<Rol, Long> {
+
+    Optional<Rol> findByNombre(String nombre);
+}

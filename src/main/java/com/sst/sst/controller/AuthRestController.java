@@ -6,6 +6,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.web.csrf.CsrfToken;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -59,4 +61,33 @@ public class AuthRestController {
 
         return ResponseEntity.ok(respuesta);
     }
+
+
+// ============================================
+// GET /api/auth/csrf
+// TOKEN PARA PETICIONES POST DESDE ANGULAR
+// ============================================
+
+    @GetMapping("/csrf")
+    public ResponseEntity<Map<String, String>> obtenerCsrf(
+            HttpServletRequest request
+    ) {
+
+        CsrfToken csrf = (CsrfToken) request
+                .getAttribute(CsrfToken.class.getName());
+
+        if (csrf == null) {
+            return ResponseEntity
+                    .internalServerError()
+                    .build();
+        }
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "headerName", csrf.getHeaderName(),
+                        "token", csrf.getToken()
+                )
+        );
+    }
+
 }

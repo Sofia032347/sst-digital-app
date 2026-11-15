@@ -5,99 +5,230 @@ import com.sst.sst.model.Actividad;
 import com.sst.sst.model.Notificacion;
 import com.sst.sst.model.Usuario;
 import com.sst.sst.repository.NotificacionRepository;
-
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
 public class NotificacionService {
 
-    private final NotificacionRepository notificacionRepository;
+    private static final int MINUTOS_POSPOSICION = 5;
 
-    public NotificacionService(
-            NotificacionRepository notificacionRepository
-    ) {
-        this.notificacionRepository = notificacionRepository;
-    }
-
-    // ============================================
-    // ESTADOS QUE REQUIEREN ATENCIÓN
-    // ============================================
-
-    private static final List<String> ESTADOS_PENDIENTES =
+    private static final List<String> ESTADOS_ACTIVOS =
             List.of(
                     Notificacion.ESTADO_PENDIENTE,
                     Notificacion.ESTADO_POSPUESTA
             );
 
-    // ============================================
-    // 1. CONSULTAR HISTORIAL DE NOTIFICACIONES
-    // ============================================
+    private final NotificacionRepository repositorio;
+
+    private final EntityManager entityManager;
+
+    public NotificacionService(
+            NotificacionRepository repositorio,
+            EntityManager entityManager
+    ) {
+        this.repositorio = repositorio;
+        this.entityManager = entityManager;
+    }
+
+    // ==========================================
+    // HISTORIAL DE NOTIFICACIONES
+    // ==========================================
 
     @Transactional(readOnly = true)
     public List<Notificacion> obtenerHistorial(
             Long usuarioId
     ) {
-        return notificacionRepository
+
+        return repositorio
                 .findByUsuarioIdOrderByFechaCreacionDesc(
                         usuarioId
-                );
+                )
+                .stream()
+
+                // No mostrar eventos antiguos de
+                // reactivación que duplicaban
+                // las notificaciones de la campana.
+
+                .filter(n ->
+                        !Notificacion
+                                .TIPO_RECORDATORIO_REACTIVADO
+                                .equals(n.getTipo())
+                )
+
+                // IMPORTANTE:
+                //
+                // Ahora se incluyen los recordatorios
+                // originales, aunque tengan
+                // vecesPospuesta = 0.
+                //
+                // Así aparece la primera notificación
+                // cuando vence el temporizador.
+
+                .toList();
     }
 
-    // ============================================
-    // 2. CONSULTAR NOTIFICACIONES PENDIENTES
-    // ============================================
+    // ==========================================
+    // OBTENER RECORDATORIO ACTIVO
+    // ==========================================
+
+    @Transactional(readOnly = true)
+    public Notificacion obtenerRecordatorioActivo(
+            Long usuarioId,
+            LocalDate dia
+    ) {
+
+        return repositorio
+                .findByUsuarioIdAndEstadoInOrderByFechaCreacionDesc(
+                        usuarioId,
+                        ESTADOS_ACTIVOS
+                )
+                .stream()
+
+                .filter(n ->
+                        Notificacion.TIPO_RECORDATORIO
+                                .equals(n.getTipo())
+                )
+
+                .filter(n ->
+                        n.getFechaProgramada() != null
+                )
+
+                .filter(n ->
+                        n.getFechaProgramada()
+                                .toLocalDate()
+                                .equals(dia)
+                )
+
+                .min(
+                        Comparator
+
+                                // Un recordatorio pospuesto
+                                // tiene prioridad frente
+                                // a uno pendiente antiguo.
+
+                                .comparingInt(
+                                        (Notificacion n) ->
+                                                Notificacion
+                                                        .ESTADO_POSPUESTA
+                                                        .equals(n.getEstado())
+                                                        ? 0
+                                                        : 1
+                                )
+
+                                // Conservar el ID original.
+                                .thenComparing(
+                                        Notificacion::getId
+                                )
+                )
+
+                .orElse(null);
+    }
+
+    // ==========================================
+    // NOTIFICACIONES PENDIENTES
+    // ==========================================
 
     @Transactional(readOnly = true)
     public List<Notificacion> obtenerPendientes(
             Long usuarioId
     ) {
-        return notificacionRepository
-                .findByUsuarioIdAndEstadoInOrderByFechaCreacionDesc(
+
+        Notificacion activa =
+                obtenerRecordatorioActivo(
                         usuarioId,
-                        ESTADOS_PENDIENTES
+                        LocalDate.now()
                 );
+
+        if (activa == null) {
+            return List.of();
+        }
+
+        return List.of(activa);
     }
 
-    // ============================================
-    // 3. CONTAR NOTIFICACIONES PENDIENTES
-    // ============================================
+    // ==========================================
+    // CONTAR RECORDATORIOS PENDIENTES
+    // ==========================================
 
     @Transactional(readOnly = true)
     public long contarPendientes(
             Long usuarioId
     ) {
-        return notificacionRepository
-                .countByUsuarioIdAndEstadoIn(
-                        usuarioId,
-                        ESTADOS_PENDIENTES
-                );
+
+        return obtenerPendientes(
+                usuarioId
+        ).size();
     }
 
-    // ============================================
-    // 4. OBTENER RECORDATORIOS CUYA HORA LLEGÓ
-    // ============================================
+    // ==========================================
+    // CONTAR NOTIFICACIONES SIN LEER
+    // ==========================================
+
+    @Transactional(readOnly = true)
+    public long contarSinLeer(
+            Long usuarioId
+    ) {
+
+        return obtenerHistorial(usuarioId)
+                .stream()
+
+                .filter(n ->
+                        !Boolean.TRUE.equals(
+                                n.getLeida()
+                        )
+                )
+
+                .count();
+    }
+
+    // ==========================================
+    // RECORDATORIOS QUE YA VENCIERON
+    // ==========================================
 
     @Transactional(readOnly = true)
     public List<Notificacion> obtenerRecordatoriosVencidos(
             Long usuarioId
     ) {
-        return notificacionRepository
-                .buscarRecordatoriosVencidos(
+
+        Notificacion actual =
+                obtenerRecordatorioActivo(
                         usuarioId,
-                        ESTADOS_PENDIENTES,
-                        LocalDateTime.now()
+                        LocalDate.now()
                 );
+
+        if (actual == null) {
+            return List.of();
+        }
+
+        LocalDateTime hora =
+                actual.getProximoAviso() != null
+                        ? actual.getProximoAviso()
+                        : actual.getFechaProgramada();
+
+        if (
+                hora != null &&
+                        !hora.isAfter(LocalDateTime.now())
+        ) {
+            return List.of(actual);
+        }
+
+        return List.of();
     }
 
-    // ============================================
-    // 5. CREAR RECORDATORIO DE PAUSA ACTIVA
-    // ============================================
+    // ==========================================
+    // CREAR RECORDATORIO
+    // ==========================================
 
     @Transactional
     public Notificacion crearRecordatorio(
@@ -105,49 +236,109 @@ public class NotificacionService {
             LocalDateTime fechaProgramada
     ) {
 
-        if (usuario == null || usuario.getId() == null) {
+        if (
+                usuario == null ||
+                        usuario.getId() == null ||
+                        fechaProgramada == null
+        ) {
+
             throw new IllegalArgumentException(
-                    "Se requiere un usuario válido"
+                    "Usuario y fecha son obligatorios"
             );
         }
 
-        if (fechaProgramada == null) {
-            throw new IllegalArgumentException(
-                    "La fecha programada es obligatoria"
+        // Bloquear el mismo usuario utilizado
+        // por la sincronización y el aplazamiento.
+        //
+        // Esto evita crear varios recordatorios
+        // ante peticiones concurrentes.
+
+        Usuario bloqueado =
+                entityManager.find(
+                        Usuario.class,
+                        usuario.getId(),
+                        LockModeType.PESSIMISTIC_WRITE
+                );
+
+        if (bloqueado == null) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Usuario no encontrado"
             );
         }
 
-        // Evita duplicados del mismo recordatorio
-        // pendiente para el mismo usuario y hora.
-        List<Notificacion> pendientes =
-                obtenerPendientes(usuario.getId());
+        // ======================================
+        // REUTILIZAR EL RECORDATORIO VIGENTE
+        // ======================================
 
-        for (Notificacion existente : pendientes) {
+        Notificacion vigente =
+                obtenerRecordatorioActivo(
+                        usuario.getId(),
+                        fechaProgramada.toLocalDate()
+                );
 
-            if (Notificacion.TIPO_RECORDATORIO.equals(
-                    existente.getTipo()
-            ) && fechaProgramada.equals(
-                    existente.getFechaProgramada()
-            )) {
+        if (vigente != null) {
+            return vigente;
+        }
+
+        // ======================================
+        // EVITAR DUPLICADOS POR FECHA
+        // ======================================
+
+        for (
+                Notificacion existente :
+                repositorio
+                        .findByUsuarioIdOrderByFechaCreacionDesc(
+                                usuario.getId()
+                        )
+        ) {
+
+            if (
+                    Notificacion.TIPO_RECORDATORIO
+                            .equals(existente.getTipo())
+
+                            && existente.getFechaProgramada()
+                            != null
+
+                            && existente.getFechaProgramada()
+                            .truncatedTo(
+                                    ChronoUnit.SECONDS
+                            )
+                            .equals(
+                                    fechaProgramada.truncatedTo(
+                                            ChronoUnit.SECONDS
+                                    )
+                            )
+            ) {
+
                 return existente;
             }
         }
 
-        Notificacion nueva = new Notificacion(
-                usuario,
-                Notificacion.TIPO_RECORDATORIO,
-                "Es momento de realizar una pausa activa",
-                "Tienes una pausa activa pendiente. "
-                        + "Puedes iniciarla o posponer el recordatorio.",
-                fechaProgramada
-        );
+        // ======================================
+        // CREAR EL PRIMER RECORDATORIO
+        // ======================================
 
-        return notificacionRepository.save(nueva);
+        return repositorio.save(
+                new Notificacion(
+                        bloqueado,
+
+                        Notificacion.TIPO_RECORDATORIO,
+
+                        "Es momento de realizar una pausa activa",
+
+                        "Tienes una pausa activa pendiente. " +
+                                "Puedes iniciarla o posponer 5 minutos.",
+
+                        fechaProgramada
+                )
+        );
     }
 
-    // ============================================
-    // 6. POSPONER RECORDATORIO
-    // ============================================
+    // ==========================================
+    // POSPONER CINCO MINUTOS
+    // ==========================================
 
     @Transactional
     public Notificacion posponerRecordatorio(
@@ -156,48 +347,172 @@ public class NotificacionService {
             int minutos
     ) {
 
-        if (minutos < 1 || minutos > 60) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Solo se permite posponer entre 1 y 60 minutos"
-            );
-        }
+        // La duración de aplazamiento se
+        // mantiene en cinco minutos.
+        //
+        // No depende de lo enviado por Angular.
 
-        Notificacion notificacion =
+        entityManager.find(
+                Usuario.class,
+                usuarioId,
+                LockModeType.PESSIMISTIC_WRITE
+        );
+
+        Notificacion n =
                 buscarNotificacionPropia(
                         notificacionId,
                         usuarioId
                 );
 
-        if (!Notificacion.TIPO_RECORDATORIO.equals(
-                notificacion.getTipo()
-        )) {
+        entityManager.lock(
+                n,
+                LockModeType.PESSIMISTIC_WRITE
+        );
+
+        // ======================================
+        // VERIFICAR QUE SIGA VIGENTE
+        // ======================================
+
+        Notificacion vigente =
+                obtenerRecordatorioActivo(
+                        usuarioId,
+                        LocalDate.now()
+                );
+
+        if (
+                vigente == null ||
+                        !vigente.getId().equals(n.getId()) ||
+                        !Notificacion.TIPO_RECORDATORIO
+                                .equals(n.getTipo()) ||
+                        !ESTADOS_ACTIVOS.contains(n.getEstado())
+        ) {
+
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
-                    "Solo se pueden posponer recordatorios"
+                    "Este ya no es el recordatorio vigente"
             );
         }
 
-        if (!ESTADOS_PENDIENTES.contains(
-                notificacion.getEstado()
-        )) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "El recordatorio ya fue atendido"
-            );
-        }
+        // ======================================
+        // GUARDAR EL APLAZAMIENTO
+        // ======================================
 
-        LocalDateTime nuevaFecha =
-                LocalDateTime.now().plusMinutes(minutos);
+        LocalDateTime proxima =
+                LocalDateTime.now()
+                        .plusMinutes(
+                                MINUTOS_POSPOSICION
+                        );
 
-        notificacion.posponerHasta(nuevaFecha);
+        n.posponerHasta(proxima);
 
-        return notificacionRepository.save(notificacion);
+        // La acción de posponer queda registrada.
+        n.setLeida(true);
+
+        Notificacion guardada =
+                repositorio.save(n);
+
+        // ======================================
+        // REGISTRAR EVENTO EN EL HISTORIAL
+        // ======================================
+
+        Notificacion evento =
+                new Notificacion(
+                        n.getUsuario(),
+
+                        Notificacion
+                                .TIPO_RECORDATORIO_POSPUESTO,
+
+                        "Recordatorio pospuesto",
+
+                        "Aplazaste tu pausa 5 minutos. " +
+                                "Próximo aviso: " +
+                                proxima.toLocalTime()
+                                        .withNano(0),
+
+                        proxima
+                );
+
+        evento.marcarAtendida();
+
+        // El evento queda en el historial,
+        // sin aumentar el contador sin leer.
+        evento.setLeida(true);
+
+        repositorio.save(evento);
+
+        return guardada;
     }
 
-    // ============================================
-    // 7. REGISTRAR UNA PAUSA COMPLETADA
-    // ============================================
+    // ==========================================
+    // REACTIVACIÓN DE RECORDATORIOS
+    // ==========================================
+
+    @Transactional
+    public void registrarReactivacion(
+            Notificacion original
+    ) {
+
+        // Se conserva este método por
+        // compatibilidad con el código existente.
+        //
+        // No crear otra notificación cada vez
+        // que Angular consulta /sincronizar.
+    }
+
+    // ==========================================
+    // MARCAR NOTIFICACIÓN COMO LEÍDA
+    // ==========================================
+
+    @Transactional
+    public Notificacion marcarComoLeida(
+            Long notificacionId,
+            Long usuarioId
+    ) {
+
+        Notificacion n =
+                buscarNotificacionPropia(
+                        notificacionId,
+                        usuarioId
+                );
+
+        n.setLeida(true);
+
+        return repositorio.save(n);
+    }
+
+    // ==========================================
+    // MARCAR TODAS COMO LEÍDAS
+    // ==========================================
+
+    @Transactional
+    public void marcarTodasComoLeidas(
+            Long usuarioId
+    ) {
+
+        for (
+                Notificacion n :
+                repositorio
+                        .findByUsuarioIdOrderByFechaCreacionDesc(
+                                usuarioId
+                        )
+        ) {
+
+            if (
+                    !Boolean.TRUE.equals(
+                            n.getLeida()
+                    )
+            ) {
+
+                n.setLeida(true);
+
+                repositorio.save(n);
+            }
+        }
+    }
+
+    // ==========================================
+    // REGISTRAR PAUSA COMPLETADA
+    // ==========================================
 
     @Transactional
     public Notificacion registrarPausaCompletada(
@@ -205,95 +520,140 @@ public class NotificacionService {
             Actividad actividad
     ) {
 
-        if (usuario == null || usuario.getId() == null
-                || actividad == null
-                || actividad.getId() == null
-                || actividad.getUsuario() == null) {
+        if (
+                usuario == null ||
+                        usuario.getId() == null ||
+                        actividad == null ||
+                        actividad.getId() == null ||
+                        actividad.getUsuario() == null
+        ) {
 
             throw new IllegalArgumentException(
-                    "Usuario o actividad no válidos"
+                    "Usuario o actividad inválidos"
             );
         }
 
-        if (!usuario.getId().equals(
-                actividad.getUsuario().getId()
-        )) {
+        if (
+                !usuario.getId().equals(
+                        actividad.getUsuario().getId()
+                )
+        ) {
+
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
-                    "La actividad no pertenece al usuario"
+                    "La actividad pertenece a otro usuario"
             );
         }
 
-        if (!Actividad.ESTADO_COMPLETADA.equals(
-                actividad.getEstado()
-        )) {
+        if (
+                !Actividad.ESTADO_COMPLETADA
+                        .equals(actividad.getEstado())
+        ) {
+
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
-                    "La actividad todavía no está completada"
+                    "La actividad no está completada"
             );
         }
 
-        // Evitar registrar dos veces el aviso
-        // de finalización de la misma actividad.
-        List<Notificacion> existentes =
-                notificacionRepository
+        // ======================================
+        // EVITAR NOTIFICACIONES DUPLICADAS
+        // ======================================
+
+        for (
+                Notificacion existente :
+                repositorio
                         .findByUsuarioIdAndActividadIdOrderByFechaCreacionDesc(
                                 usuario.getId(),
                                 actividad.getId()
-                        );
+                        )
+        ) {
 
-        for (Notificacion existente : existentes) {
+            if (
+                    Notificacion.TIPO_PAUSA_COMPLETADA
+                            .equals(existente.getTipo())
+            ) {
 
-            if (Notificacion.TIPO_PAUSA_COMPLETADA.equals(
-                    existente.getTipo()
-            )) {
                 return existente;
             }
         }
 
-        // Atender recordatorios asociados
-        // a esta actividad, si existen.
-        for (Notificacion existente : existentes) {
+        // ======================================
+        // CERRAR RECORDATORIOS ANTERIORES
+        // ======================================
 
-            if (Notificacion.TIPO_RECORDATORIO.equals(
-                    existente.getTipo()
-            ) && ESTADOS_PENDIENTES.contains(
-                    existente.getEstado()
-            )) {
-                existente.marcarAtendida();
-                notificacionRepository.save(existente);
+        LocalDate hoy =
+                LocalDate.now();
+
+        for (
+                Notificacion n :
+                repositorio
+                        .findByUsuarioIdAndEstadoInOrderByFechaCreacionDesc(
+                                usuario.getId(),
+                                ESTADOS_ACTIVOS
+                        )
+        ) {
+
+            if (
+                    Notificacion.TIPO_RECORDATORIO
+                            .equals(n.getTipo())
+
+                            && n.getFechaProgramada()
+                            != null
+
+                            && n.getFechaProgramada()
+                            .toLocalDate()
+                            .equals(hoy)
+            ) {
+
+                n.marcarAtendida();
+
+                n.setActividad(actividad);
+
+                repositorio.save(n);
             }
         }
 
-        // Crear aviso informativo para la campana.
-        Notificacion completada = new Notificacion(
-                usuario,
-                Notificacion.TIPO_PAUSA_COMPLETADA,
-                "Pausa activa completada",
-                "Has finalizado correctamente tu pausa activa.",
-                LocalDateTime.now()
-        );
+        // ======================================
+        // CREAR NOTIFICACIÓN DE FINALIZACIÓN
+        // ======================================
 
-        completada.setActividad(actividad);
-        completada.marcarAtendida();
+        Notificacion evento =
+                new Notificacion(
+                        usuario,
 
-        return notificacionRepository.save(completada);
+                        Notificacion.TIPO_PAUSA_COMPLETADA,
+
+                        "Pausa activa completada",
+
+                        "Finalizaste correctamente tu pausa activa.",
+
+                        LocalDateTime.now()
+                );
+
+        evento.setActividad(actividad);
+
+        evento.marcarAtendida();
+
+        return repositorio.save(evento);
     }
 
-    // ============================================
-    // 8. CONSULTAR UNA NOTIFICACIÓN PROPIA
-    // ============================================
+    // ==========================================
+    // BUSCAR NOTIFICACIÓN DEL USUARIO
+    // ==========================================
 
     @Transactional(readOnly = true)
     public Notificacion buscarNotificacionPropia(
             Long notificacionId,
             Long usuarioId
     ) {
-        return notificacionRepository
+
+        return repositorio
                 .findByIdAndUsuarioId(
                         notificacionId,
                         usuarioId
                 )
+
                 .orElseThrow(() ->
                         new ResponseStatusException(
                                 HttpStatus.NOT_FOUND,

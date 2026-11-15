@@ -4,23 +4,22 @@ import com.sst.sst.model.Actividad;
 import com.sst.sst.model.Usuario;
 import com.sst.sst.repository.ActividadRepository;
 import com.sst.sst.repository.UsuarioRepository;
+import com.sst.sst.service.NotificacionService;
+import com.sst.sst.service.RecordatorioPausaService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
-import java.time.DayOfWeek;
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
@@ -35,6 +34,12 @@ public class ActividadController {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private RecordatorioPausaService recordatorioPausaService;
+
+    @Autowired
+    private NotificacionService notificacionService;
 
     private static final int OBJETIVO_DIARIO = 4;
     private static final int DURACION_MINIMA_RUTINA_SEGUNDOS = 600;
@@ -250,45 +255,25 @@ public class ActividadController {
         return "empleado/empleado";
     }
 
-    // --- ENDPOINT DE ESTADO PARA BLOQUEO DE BOTÓN ---
+    // --- ESTADO REAL DE LAS PAUSAS Y RECORDATORIOS ---
     @GetMapping("/estado-boton")
     @ResponseBody
-    public Map<String, Object> verificarEstadoBoton(HttpSession session) {
-        Usuario logueado = (Usuario) session.getAttribute("usuarioLogueado");
+    public Map<String, Object> verificarEstadoBoton(
+            HttpSession session,
+            Authentication authentication) {
+
+        Usuario usuario = requerirUsuario(authentication);
+        LocalDateTime horaLogin =
+                (LocalDateTime) session.getAttribute("horaInicioSesion");
+
+        RecordatorioPausaService.EstadoPausa estado =
+                recordatorioPausaService.sincronizar(usuario, horaLogin);
+
         Map<String, Object> respuesta = new HashMap<>();
-
-        if (logueado == null) return respuesta;
-
-        LocalDateTime inicioHoy = LocalDate.now().atStartOfDay();
-        LocalDateTime finHoy = LocalDate.now().atTime(LocalTime.MAX);
-        LocalDateTime horaLogin = (LocalDateTime) session.getAttribute("horaInicioSesion");
-
-        long minutosTranscurridos = 0;
-        if (horaLogin != null) {
-            minutosTranscurridos = java.time.Duration.between(horaLogin, LocalDateTime.now()).toMinutes();
-        }
-
-        List<Actividad> actividadesHoy = actividadRepository.findByUsuarioIdAndFechaBetween(
-                logueado.getId(), inicioHoy, finHoy);
-
-        boolean yaCompleto = actividadesHoy.stream()
-                .filter(a -> Actividad.ESTADO_COMPLETADA.equals(a.getEstado()))
-                .count() >= OBJETIVO_DIARIO;
-        boolean tieneIncompleta = actividadesHoy.stream().anyMatch(a -> "INCOMPLETA".equals(a.getEstado()));
-
-        String estado;
-        if (yaCompleto) {
-            estado = "BLOQUEADO_COMPLETO";
-        } else if (tieneIncompleta) {
-            estado = "REANUDAR";
-        } else if (minutosTranscurridos >= 5) {
-            estado = "DISPONIBLE";
-        } else {
-            estado = "ESPERANDO";
-            respuesta.put("faltan", 5 - minutosTranscurridos);
-        }
-
-        respuesta.put("estado", estado);
+        respuesta.put("estado", estado.estado());
+        respuesta.put("faltan", estado.faltan());
+        respuesta.put("proximaPausa", estado.proximaPausa());
+        respuesta.put("notificacionId", estado.notificacionId());
         return respuesta;
     }
 
@@ -415,6 +400,7 @@ public class ActividadController {
     // --- FINALIZAR PAUSA: POST CON CSRF Y VALIDACIÓN DE PROPIETARIO ---
     @PostMapping("/finalizar-pausa")
     @ResponseBody
+    @Transactional
     public ResponseEntity<String> finalizarPausa(HttpSession session, Authentication authentication) {
         Actividad actividad = obtenerActividadActualAutorizada(session, authentication);
         comprobarEnProceso(actividad);
@@ -432,7 +418,9 @@ public class ActividadController {
         actividad.setValidadoIA(false);
         // COMPLETADA = finalización declarada por la interfaz; NO certificación por IA.
         actividad.setEstado(Actividad.ESTADO_COMPLETADA);
-        actividadRepository.save(actividad);
+        Actividad guardada = actividadRepository.save(actividad);
+        notificacionService.registrarPausaCompletada(
+                guardada.getUsuario(), guardada);
         session.removeAttribute("idActividadActual");
 
         return ResponseEntity.ok("Pausa registrada como COMPLETADA (sin validación IA)");
@@ -464,6 +452,388 @@ public class ActividadController {
         actividadRepository.save(actividad);
         session.removeAttribute("idActividadActual");
         return ResponseEntity.ok("Registrada como CANCELADA");
+    }
+
+
+    // ==========================================
+    // CONSULTAR PAUSA INCOMPLETA
+    // ==========================================
+
+    @GetMapping("/pausa-pendiente")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> obtenerPausaPendiente(
+            Authentication authentication
+    ) {
+        Usuario usuario = requerirUsuario(authentication);
+
+        Actividad pendiente =
+                buscarUltimaPausaIncompleta(usuario.getId());
+
+        Map<String, Object> respuesta = new HashMap<>();
+
+        if (pendiente == null) {
+            respuesta.put("existe", false);
+            respuesta.put("tienePausaPendiente", false);
+            return ResponseEntity.ok(respuesta);
+        }
+
+        respuesta.put("existe", true);
+        respuesta.put("tienePausaPendiente", true);
+        respuesta.put("id", pendiente.getId());
+        respuesta.put("estado", pendiente.getEstado());
+
+        respuesta.put(
+                "indiceEjercicio",
+                valorOZero(pendiente.getIndiceEjercicio())
+        );
+
+        respuesta.put(
+                "indiceFase",
+                valorOZero(pendiente.getIndiceFase())
+        );
+
+        respuesta.put(
+                "tiempoRestante",
+                valorOZero(pendiente.getTiempoRestante())
+        );
+
+        respuesta.put(
+                "segundosTranscurridos",
+                valorOZero(pendiente.getSegundosTranscurridos())
+        );
+
+        respuesta.put(
+                "ejerciciosCompletados",
+                valorOZero(pendiente.getEjerciciosCompletados())
+        );
+
+        return ResponseEntity.ok(respuesta);
+    }
+
+    // ==========================================
+    // GUARDAR PAUSA COMO INCOMPLETA
+    // ==========================================
+
+    @PostMapping("/guardar-pausa-incompleta")
+    @ResponseBody
+    @Transactional
+    public ResponseEntity<Map<String, Object>> guardarPausaIncompleta(
+            HttpSession session,
+            Authentication authentication,
+            @RequestBody(required = false)
+            Map<String, Object> progreso
+    ) {
+        Actividad actividad =
+                obtenerActividadActualAutorizada(
+                        session,
+                        authentication
+                );
+
+        comprobarEnProceso(actividad);
+
+        // Guardar el tiempo efectivo acumulado.
+        // No se sumará el tiempo que el empleado
+        // permanezca fuera de la rutina.
+
+        int segundosCalculados =
+                calcularSegundosTranscurridos(actividad);
+
+        int segundosGuardados =
+                leerEntero(
+                        progreso,
+                        "segundosTranscurridos",
+                        segundosCalculados
+                );
+
+        int segundos =
+                Math.max(
+                        0,
+                        Math.min(
+                                segundosCalculados,
+                                segundosGuardados
+                        )
+                );
+
+        actividad.setDuracionSegundos(segundos);
+        actividad.setSegundosTranscurridos(segundos);
+
+        actividad.setIndiceEjercicio(
+                leerEntero(
+                        progreso,
+                        "indiceEjercicio",
+                        valorOZero(actividad.getIndiceEjercicio())
+                )
+        );
+
+        actividad.setIndiceFase(
+                leerEntero(
+                        progreso,
+                        "indiceFase",
+                        valorOZero(actividad.getIndiceFase())
+                )
+        );
+
+        actividad.setTiempoRestante(
+                leerEntero(
+                        progreso,
+                        "tiempoRestante",
+                        valorOZero(actividad.getTiempoRestante())
+                )
+        );
+
+        actividad.setEjerciciosCompletados(
+                leerEntero(
+                        progreso,
+                        "ejerciciosCompletados",
+                        valorOZero(
+                                actividad.getEjerciciosCompletados()
+                        )
+                )
+        );
+
+        actividad.setEstado(
+                Actividad.ESTADO_INCOMPLETA
+        );
+
+        Actividad guardada =
+                actividadRepository.save(actividad);
+
+        session.removeAttribute("idActividadActual");
+
+        Map<String, Object> respuesta = new HashMap<>();
+
+        respuesta.put("id", guardada.getId());
+        respuesta.put("estado", guardada.getEstado());
+        respuesta.put(
+                "mensaje",
+                "Pausa guardada como INCOMPLETA"
+        );
+
+        return ResponseEntity.ok(respuesta);
+    }
+
+    // ==========================================
+    // REANUDAR PAUSA INCOMPLETA
+    // ==========================================
+
+    @PostMapping("/reanudar-pausa")
+    @ResponseBody
+    @Transactional
+    public ResponseEntity<Map<String, Object>> reanudarPausa(
+            HttpSession session,
+            Authentication authentication,
+            @RequestBody(required = false)
+            Map<String, Object> datos
+    ) {
+        Usuario usuario = requerirUsuario(authentication);
+
+        Actividad pendiente =
+                buscarUltimaPausaIncompleta(usuario.getId());
+
+        if (pendiente == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "No tienes una pausa incompleta para reanudar"
+            );
+        }
+
+        // La pausa pendiente debe ser de hoy.
+        // No reabrir actividades de días anteriores.
+
+        if (
+                pendiente.getFecha() == null ||
+                        !pendiente.getFecha()
+                                .toLocalDate()
+                                .equals(LocalDate.now())
+        ) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Solo puedes reanudar pausas del día actual"
+            );
+        }
+
+        // Si el frontend envía un ID, verificar que
+        // coincida con la actividad pendiente real.
+
+        if (
+                datos != null &&
+                        datos.containsKey("id")
+        ) {
+            Long idSolicitado =
+                    leerLong(datos.get("id"));
+
+            if (
+                    idSolicitado == null ||
+                            !idSolicitado.equals(pendiente.getId())
+            ) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "La pausa solicitada no coincide con la pendiente"
+                );
+            }
+        }
+
+        // Evitar reanudar mientras otra actividad
+        // del mismo usuario sigue EN_PROCESO.
+
+        LocalDate hoy = LocalDate.now();
+
+        boolean otraEnProceso =
+                actividadRepository
+                        .findByUsuarioIdAndFechaBetween(
+                                usuario.getId(),
+                                hoy.atStartOfDay(),
+                                hoy.atTime(LocalTime.MAX)
+                        )
+                        .stream()
+                        .anyMatch(a ->
+                                !a.getId().equals(pendiente.getId())
+                                        &&
+                                        Actividad.ESTADO_EN_PROCESO
+                                                .equals(a.getEstado())
+                        );
+
+        if (otraEnProceso) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Ya existe otra pausa en proceso"
+            );
+        }
+
+        // Se conserva el progreso registrado.
+        // El tiempo transcurrido desde el guardado
+        // no se agrega a la duración de ejercicios.
+
+        pendiente.setEstado(
+                Actividad.ESTADO_EN_PROCESO
+        );
+
+        Actividad guardada =
+                actividadRepository.saveAndFlush(pendiente);
+
+        session.setAttribute(
+                "idActividadActual",
+                guardada.getId()
+        );
+
+        Map<String, Object> respuesta = new HashMap<>();
+
+        respuesta.put("id", guardada.getId());
+        respuesta.put("estado", guardada.getEstado());
+
+        respuesta.put(
+                "indiceEjercicio",
+                valorOZero(guardada.getIndiceEjercicio())
+        );
+
+        respuesta.put(
+                "indiceFase",
+                valorOZero(guardada.getIndiceFase())
+        );
+
+        respuesta.put(
+                "tiempoRestante",
+                valorOZero(guardada.getTiempoRestante())
+        );
+
+        respuesta.put(
+                "segundosTranscurridos",
+                valorOZero(guardada.getSegundosTranscurridos())
+        );
+
+        respuesta.put(
+                "ejerciciosCompletados",
+                valorOZero(guardada.getEjerciciosCompletados())
+        );
+
+        respuesta.put(
+                "mensaje",
+                "Pausa reanudada correctamente"
+        );
+
+        return ResponseEntity.ok(respuesta);
+    }
+
+    // ==========================================
+    // BUSCAR ÚLTIMA PAUSA INCOMPLETA DE HOY
+    // ==========================================
+
+    private Actividad buscarUltimaPausaIncompleta(
+            Long usuarioId
+    ) {
+        LocalDate hoy = LocalDate.now();
+
+        return actividadRepository
+                .findByUsuarioIdAndFechaBetween(
+                        usuarioId,
+                        hoy.atStartOfDay(),
+                        hoy.atTime(LocalTime.MAX)
+                )
+                .stream()
+                .filter(a ->
+                        Actividad.ESTADO_INCOMPLETA
+                                .equals(a.getEstado())
+                )
+                .max(
+                        Comparator.comparing(
+                                Actividad::getFecha
+                        )
+                )
+                .orElse(null);
+    }
+
+    // ==========================================
+    // UTILIDADES PARA RECIBIR DATOS DE ANGULAR
+    // ==========================================
+
+    private int valorOZero(Integer valor) {
+        return valor == null ? 0 : Math.max(0, valor);
+    }
+
+    private int leerEntero(
+            Map<String, Object> datos,
+            String campo,
+            int valorPorDefecto
+    ) {
+        if (
+                datos == null ||
+                        !datos.containsKey(campo) ||
+                        datos.get(campo) == null
+        ) {
+            return Math.max(0, valorPorDefecto);
+        }
+
+        Object valor = datos.get(campo);
+
+        try {
+            int resultado =
+                    Integer.parseInt(valor.toString());
+
+            if (resultado < 0) {
+                throw new NumberFormatException();
+            }
+
+            return resultado;
+
+        } catch (NumberFormatException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El campo " + campo +
+                            " debe ser un entero no negativo"
+            );
+        }
+    }
+
+    private Long leerLong(Object valor) {
+        if (valor == null) {
+            return null;
+        }
+
+        try {
+            return Long.parseLong(valor.toString());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     // --- MÉTODOS DE SEGURIDAD REUTILIZADOS POR LOS ENDPOINTS ---

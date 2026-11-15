@@ -3,15 +3,23 @@ package com.sst.sst.service;
 import com.sst.sst.model.Actividad;
 import com.sst.sst.model.Notificacion;
 import com.sst.sst.model.Usuario;
-import com.sst.sst.repository.ActividadRepository;
 
+import com.sst.sst.repository.ActividadRepository;
+import com.sst.sst.repository.NotificacionRepository;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 
 import java.util.Comparator;
 import java.util.List;
@@ -20,47 +28,195 @@ import java.util.Optional;
 @Service
 public class RecordatorioPausaService {
 
-    // ============================================
-    // CONFIGURACIÓN ACTUAL DE SST DIGITAL
-    // ============================================
-
-    // Se conservan los cinco minutos de la
-    // simulación actual.
-    //
-    // Más adelante podremos configurar este
-    // intervalo para cada organización.
-
+    private static final int META_DIARIA = 4;
     private static final int MINUTOS_ENTRE_PAUSAS = 5;
 
-    private static final int META_DIARIA = 4;
+    private static final List<String> ESTADOS_ACTIVOS =
+            List.of(
+                    Notificacion.ESTADO_PENDIENTE,
+                    Notificacion.ESTADO_POSPUESTA
+            );
 
-    private final ActividadRepository actividadRepository;
-
-    private final NotificacionService notificacionService;
+    private final ActividadRepository actividades;
+    private final NotificacionRepository notificacionesRepository;
+    private final NotificacionService notificaciones;
+    private final EntityManager entityManager;
 
     public RecordatorioPausaService(
-            ActividadRepository actividadRepository,
-            NotificacionService notificacionService
+            ActividadRepository actividades,
+            NotificacionRepository notificacionesRepository,
+            NotificacionService notificaciones,
+            EntityManager entityManager
     ) {
-        this.actividadRepository = actividadRepository;
-        this.notificacionService = notificacionService;
+        this.actividades = actividades;
+        this.notificacionesRepository =
+                notificacionesRepository;
+        this.notificaciones = notificaciones;
+        this.entityManager = entityManager;
     }
-
-    // ============================================
-    // RESULTADO PARA LOS CONTROLADORES
-    // ============================================
 
     public record EstadoPausa(
             String estado,
-            long faltan,
+            int faltan,
             LocalDateTime proximaPausa,
             Long notificacionId
+    ) {}
+
+    // ==========================================
+    // CALCULAR SEGUNDOS RESTANTES
+    // ==========================================
+
+    private int segundosRestantes(
+            LocalDateTime proxima,
+            LocalDateTime ahora
     ) {
+
+        long segundos =
+                Duration.between(
+                        ahora,
+                        proxima
+                ).getSeconds();
+
+        return (int) Math.max(
+                0,
+                Math.min(
+                        Integer.MAX_VALUE,
+                        segundos
+                )
+        );
     }
 
-    // ============================================
-    // SINCRONIZAR EL ESTADO DE LAS PAUSAS
-    // ============================================
+    // ==========================================
+    // IDENTIFICAR UNA ACTIVIDAD FINALIZADA
+    // ==========================================
+
+    private boolean estaFinalizada(
+            Actividad actividad
+    ) {
+
+        String estado = actividad.getEstado();
+
+        return (
+                Actividad.ESTADO_COMPLETADA.equals(estado)
+                        || Actividad.ESTADO_INCOMPLETA.equals(estado)
+                        || Actividad.ESTADO_CANCELADA.equals(estado)
+        );
+    }
+
+    // ==========================================
+    // CALCULAR HORA DE FINALIZACIÓN
+    // ==========================================
+
+    private LocalDateTime fechaFin(
+            Actividad actividad
+    ) {
+
+        if (actividad.getFecha() == null) {
+            return null;
+        }
+
+        Integer duracion =
+                actividad.getDuracionSegundos();
+
+        long segundos = duracion == null
+                ? 0
+                : Math.max(0, duracion);
+
+        // En el modelo actual, fecha corresponde
+        // al inicio de la actividad y se guarda
+        // la duración en segundos.
+        return actividad.getFecha()
+                .plusSeconds(segundos);
+    }
+
+    // ==========================================
+    // ÚLTIMA RUTINA FINALIZADA
+    // ==========================================
+
+    private Optional<Actividad> ultimaFinalizada(
+            List<Actividad> actividadesHoy
+    ) {
+
+        return actividadesHoy
+                .stream()
+                .filter(this::estaFinalizada)
+                .filter(a ->
+                        fechaFin(a) != null
+                )
+                .max(
+                        Comparator.comparing(
+                                this::fechaFin
+                        )
+                );
+    }
+
+    // ==========================================
+    // CERRAR EL RECORDATORIO ANTERIOR
+    // ==========================================
+
+    private void cerrarRecordatoriosDeActividad(
+            Long usuarioId,
+            Actividad actividad
+    ) {
+
+        LocalDateTime fin =
+                fechaFin(actividad);
+
+        if (fin == null) {
+            return;
+        }
+
+        List<Notificacion> activos =
+                notificacionesRepository
+                        .findByUsuarioIdAndEstadoInOrderByFechaCreacionDesc(
+                                usuarioId,
+                                ESTADOS_ACTIVOS
+                        );
+
+        for (Notificacion recordatorio : activos) {
+
+            if (
+                    !Notificacion.TIPO_RECORDATORIO
+                            .equals(
+                                    recordatorio.getTipo()
+                            )
+            ) {
+                continue;
+            }
+
+            if (
+                    recordatorio.getFechaProgramada() == null
+            ) {
+                continue;
+            }
+
+            // Cerrar únicamente los recordatorios
+            // que pertenecen a un ciclo anterior
+            // a la finalización de la actividad.
+            //
+            // Esto incluye los pospuestos cuando
+            // el empleado decidió iniciar
+            // anticipadamente.
+
+            if (
+                    recordatorio.getFechaProgramada()
+                            .isAfter(fin)
+            ) {
+                continue;
+            }
+
+            recordatorio.marcarAtendida();
+            recordatorio.setActividad(actividad);
+
+            notificacionesRepository.save(
+                    recordatorio
+            );
+        }
+    }
+
+    // ==========================================
+    // SINCRONIZACIÓN PRINCIPAL
+    // ==========================================
 
     @Transactional
     public EstadoPausa sincronizar(
@@ -68,62 +224,68 @@ public class RecordatorioPausaService {
             LocalDateTime horaInicioSesion
     ) {
 
-        if (usuario == null || usuario.getId() == null) {
-            throw new IllegalArgumentException(
-                    "Se requiere un usuario válido"
+        if (
+                usuario == null ||
+                        usuario.getId() == null
+        ) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "No hay un usuario autenticado"
             );
         }
 
-        LocalDateTime ahora = LocalDateTime.now();
+        Usuario bloqueado =
+                entityManager.find(
+                        Usuario.class,
+                        usuario.getId(),
+                        LockModeType.PESSIMISTIC_WRITE
+                );
 
-        LocalDate hoy = ahora.toLocalDate();
+        if (bloqueado == null) {
 
-        // ========================================
-        // CONSULTAR ACTIVIDADES DEL DÍA
-        // ========================================
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Empleado no encontrado"
+            );
+        }
+
+        LocalDateTime ahora =
+                LocalDateTime.now();
+
+        LocalDate hoy =
+                ahora.toLocalDate();
 
         List<Actividad> actividadesHoy =
-                actividadRepository
+                actividades
                         .findByUsuarioIdAndFechaBetween(
                                 usuario.getId(),
                                 hoy.atStartOfDay(),
-                                hoy.atTime(LocalTime.MAX)
+                                hoy.atTime(
+                                        LocalTime.MAX
+                                )
                         );
 
-        long completadas = actividadesHoy.stream()
-                .filter(actividad ->
-                        Actividad.ESTADO_COMPLETADA.equals(
-                                actividad.getEstado()
-                        )
-                )
-                .count();
+        // ======================================
+        // 1. SI LA PAUSA ESTÁ EN PROCESO,
+        //    DETENER EL TEMPORIZADOR
+        // ======================================
 
-        // ========================================
-        // OBJETIVO DIARIO ALCANZADO
-        // ========================================
-
-        if (completadas >= META_DIARIA) {
-
-            return new EstadoPausa(
-                    "BLOQUEADO_COMPLETO",
-                    0,
-                    null,
-                    null
-            );
-        }
-
-        // ========================================
-        // NO INTERRUMPIR UNA ACTIVIDAD EN CURSO
-        // ========================================
-
-        boolean enProceso = actividadesHoy.stream()
-                .anyMatch(actividad ->
-                        Actividad.ESTADO_EN_PROCESO.equals(
-                                actividad.getEstado()
-                        )
-                );
+        boolean enProceso =
+                actividadesHoy
+                        .stream()
+                        .anyMatch(a ->
+                                Actividad.ESTADO_EN_PROCESO
+                                        .equals(
+                                                a.getEstado()
+                                        )
+                        );
 
         if (enProceso) {
+
+            // No hay cuenta regresiva.
+            // No se programa otra pausa.
+            // No aparece otro SweetAlert.
 
             return new EstadoPausa(
                     "EN_PROCESO",
@@ -133,173 +295,201 @@ public class RecordatorioPausaService {
             );
         }
 
-        // ========================================
-        // COMPROBAR ACTIVIDADES INCOMPLETAS
-        // ========================================
+        // ======================================
+        // 2. BUSCAR LA ÚLTIMA PAUSA QUE TERMINÓ
+        //    O FUE CANCELADA
+        // ======================================
 
-        boolean tieneIncompleta = actividadesHoy.stream()
-                .anyMatch(actividad ->
-                        Actividad.ESTADO_INCOMPLETA.equals(
-                                actividad.getEstado()
-                        )
+        Optional<Actividad> ultima =
+                ultimaFinalizada(
+                        actividadesHoy
                 );
 
-        if (tieneIncompleta) {
+        LocalDateTime ultimaFinalizacion =
+                ultima.map(this::fechaFin)
+                        .orElse(null);
+
+        // ======================================
+        // 3. CERRAR EL RECORDATORIO ANTERIOR
+        //    DESPUÉS DE TERMINAR O CANCELAR
+        // ======================================
+
+        if (ultima.isPresent()) {
+
+            cerrarRecordatoriosDeActividad(
+                    usuario.getId(),
+                    ultima.get()
+            );
+        }
+
+        // ======================================
+        // 4. COMPROBAR META DIARIA
+        // ======================================
+
+        long completadasHoy =
+                actividadesHoy
+                        .stream()
+                        .filter(a ->
+                                Actividad.ESTADO_COMPLETADA
+                                        .equals(
+                                                a.getEstado()
+                                        )
+                        )
+                        .count();
+
+        if (completadasHoy >= META_DIARIA) {
 
             return new EstadoPausa(
-                    "REANUDAR",
+                    "BLOQUEADO_COMPLETO",
                     0,
                     null,
                     null
             );
         }
 
-        // ========================================
-        // DETERMINAR EL ÚLTIMO CICLO COMPLETADO
-        // ========================================
+        // ======================================
+        // 5. SI EXISTE UN RECORDATORIO ACTIVO,
+        //    REUTILIZARLO
+        // ======================================
 
-        Optional<Actividad> ultimaCompletada =
-                actividadesHoy.stream()
-                        .filter(actividad ->
-                                Actividad.ESTADO_COMPLETADA.equals(
-                                        actividad.getEstado()
-                                )
-                        )
-                        .max(
-                                Comparator.comparing(
-                                        Actividad::getFecha
-                                )
+        Notificacion vigente =
+                notificaciones
+                        .obtenerRecordatorioActivo(
+                                usuario.getId(),
+                                hoy
                         );
 
-        LocalDateTime proximaPausa;
+        if (vigente != null) {
 
-        if (ultimaCompletada.isPresent()) {
+            LocalDateTime proxima =
+                    vigente.getProximoAviso() != null
+                            ? vigente.getProximoAviso()
+                            : vigente.getFechaProgramada();
 
-            Actividad ultima = ultimaCompletada.get();
+            if (proxima == null) {
+                proxima = ahora;
+            }
 
-            // La fecha de Actividad representa
-            // el inicio de la rutina.
-            //
-            // Sumamos su duración para aproximar
-            // el momento de finalización.
-
-            int duracion = ultima.getDuracionSegundos() != null
-                    ? Math.max(
-                    0,
-                    ultima.getDuracionSegundos()
-            )
-                    : 0;
-
-            LocalDateTime finUltimaPausa =
-                    ultima.getFecha().plusSeconds(duracion);
-
-            proximaPausa = finUltimaPausa.plusMinutes(
-                    MINUTOS_ENTRE_PAUSAS
-            );
-
-        } else {
-
-            // Primer recordatorio del ciclo:
-            // cinco minutos después de iniciar sesión.
-
-            if (horaInicioSesion == null) {
+            // Pospuesto y todavía faltan minutos.
+            if (proxima.isAfter(ahora)) {
 
                 return new EstadoPausa(
                         "ESPERANDO",
-                        MINUTOS_ENTRE_PAUSAS,
-                        null,
-                        null
+                        segundosRestantes(
+                                proxima,
+                                ahora
+                        ),
+                        proxima,
+                        vigente.getId()
                 );
             }
 
-            proximaPausa = horaInicioSesion.plusMinutes(
-                    MINUTOS_ENTRE_PAUSAS
+            // Vencimiento real del mismo ID.
+            return new EstadoPausa(
+                    "DISPONIBLE",
+                    0,
+                    proxima,
+                    vigente.getId()
             );
         }
 
-        // ========================================
-        // COMPROBAR SI YA CORRESPONDE LA PAUSA
-        // ========================================
+        // ======================================
+        // 6. DETERMINAR DESDE CUÁNDO CONTAR
+        // ======================================
 
-        if (ahora.isBefore(proximaPausa)) {
+        LocalDateTime referencia =
+                horaInicioSesion != null
+                        ? horaInicioSesion
+                        : ahora;
 
-            long segundosRestantes =
-                    Duration.between(
-                            ahora,
-                            proximaPausa
-                    ).getSeconds();
+        if (referencia.toLocalDate().isBefore(hoy)) {
 
-            // Redondear hacia arriba para no
-            // mostrar cero minutos antes de tiempo.
+            referencia =
+                    hoy.atStartOfDay();
+        }
 
-            long minutosRestantes =
-                    (segundosRestantes + 59) / 60;
+        // Después de finalizar o cancelar,
+        // la nueva cuenta se inicia desde
+        // el final REAL de esa actividad.
+
+        if (
+                ultimaFinalizacion != null &&
+                        ultimaFinalizacion.isAfter(
+                                referencia
+                        )
+        ) {
+            referencia = ultimaFinalizacion;
+        }
+
+        // ======================================
+        // 7. PROGRAMAR SIGUIENTE PAUSA
+        // ======================================
+
+        LocalDateTime proximaPausa =
+                referencia
+                        .plusMinutes(
+                                MINUTOS_ENTRE_PAUSAS
+                        )
+                        .truncatedTo(
+                                ChronoUnit.SECONDS
+                        );
+
+        // ======================================
+        // 8. TODAVÍA NO HA VENCIDO
+        // ======================================
+
+        if (proximaPausa.isAfter(ahora)) {
+
+            // Solo cuenta el tiempo.
+            // No guardar una notificación todavía.
 
             return new EstadoPausa(
                     "ESPERANDO",
-                    minutosRestantes,
+                    segundosRestantes(
+                            proximaPausa,
+                            ahora
+                    ),
                     proximaPausa,
                     null
             );
         }
 
-        // ========================================
-        // EVITAR DUPLICADOS DEL MISMO CICLO
-        // ========================================
+        // ======================================
+        // 9. VENCIMIENTO: CREAR PRIMER AVISO
+        // ======================================
 
-        // Consultamos el historial completo,
-        // incluyendo notificaciones atendidas.
-        //
-        // Esto evita recrear la notificación
-        // durante cada consulta del mismo ciclo.
-
-        List<Notificacion> historial =
-                notificacionService.obtenerHistorial(
-                        usuario.getId()
-                );
-
-        Optional<Notificacion> existente =
-                historial.stream()
-                        .filter(notificacion ->
-                                Notificacion.TIPO_RECORDATORIO.equals(
-                                        notificacion.getTipo()
-                                )
-                        )
-                        .filter(notificacion ->
-                                proximaPausa.equals(
-                                        notificacion.getFechaProgramada()
-                                )
-                        )
-                        .findFirst();
-
-        if (existente.isPresent()) {
-
-            Notificacion notificacion =
-                    existente.get();
-
-            return new EstadoPausa(
-                    "DISPONIBLE",
-                    0,
-                    proximaPausa,
-                    notificacion.getId()
-            );
-        }
-
-        // ========================================
-        // CREAR RECORDATORIO
-        // ========================================
-
-        Notificacion notificacion =
-                notificacionService.crearRecordatorio(
-                        usuario,
+        Notificacion primera =
+                notificaciones.crearRecordatorio(
+                        bloqueado,
                         proximaPausa
                 );
+
+        LocalDateTime aviso =
+                primera.getProximoAviso() != null
+                        ? primera.getProximoAviso()
+                        : primera.getFechaProgramada();
+
+        if (
+                aviso != null &&
+                        aviso.isAfter(ahora)
+        ) {
+
+            return new EstadoPausa(
+                    "ESPERANDO",
+                    segundosRestantes(
+                            aviso,
+                            ahora
+                    ),
+                    aviso,
+                    primera.getId()
+            );
+        }
 
         return new EstadoPausa(
                 "DISPONIBLE",
                 0,
-                proximaPausa,
-                notificacion.getId()
+                aviso,
+                primera.getId()
         );
     }
 }

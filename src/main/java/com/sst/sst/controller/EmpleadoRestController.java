@@ -3,16 +3,19 @@ package com.sst.sst.controller;
 
 import com.sst.sst.model.Actividad;
 import com.sst.sst.model.Usuario;
+
 import com.sst.sst.repository.ActividadRepository;
 import com.sst.sst.repository.UsuarioRepository;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -23,7 +26,10 @@ import java.util.List;
 @RequestMapping("/api/empleado")
 public class EmpleadoRestController {
 
-    // Meta establecida para SST Digital.
+    // ============================================
+    // META DIARIA DE SST DIGITAL
+    // ============================================
+
     private static final int META_DIARIA = 4;
 
     private final ActividadRepository actividadRepository;
@@ -31,36 +37,50 @@ public class EmpleadoRestController {
 
     public EmpleadoRestController(
             ActividadRepository actividadRepository,
-            UsuarioRepository usuarioRepository) {
-
+            UsuarioRepository usuarioRepository
+    ) {
         this.actividadRepository = actividadRepository;
         this.usuarioRepository = usuarioRepository;
     }
 
     // ============================================
     // GET /api/empleado/resumen
+    //
+    // Funciona para EMPLEADO y RRHH.
+    // Cada usuario consulta únicamente
+    // sus propias actividades.
     // ============================================
 
     @GetMapping("/resumen")
     public ResponseEntity<ResumenEmpleado> obtenerResumen(
-            Authentication authentication) {
+            Authentication authentication
+    ) {
 
-        // 1. Verificar que exista una sesión válida.
-        if (authentication == null
-                || !authentication.isAuthenticated()
-                || "anonymousUser".equals(authentication.getPrincipal())) {
+        // ========================================
+        // 1. VERIFICAR AUTENTICACIÓN
+        // ========================================
 
+        if (
+                authentication == null ||
+                        !authentication.isAuthenticated() ||
+                        "anonymousUser".equals(
+                                authentication.getPrincipal()
+                        )
+        ) {
             throw new ResponseStatusException(
                     HttpStatus.UNAUTHORIZED,
                     "Debe iniciar sesión"
             );
         }
 
-        // 2. Identificar al usuario autenticado.
-        // Nunca aceptamos un usuarioId enviado desde Angular.
+        // ========================================
+        // 2. OBTENER USUARIO AUTENTICADO
+        // ========================================
+
         String email = authentication.getName();
 
-        Usuario usuario = usuarioRepository.findByEmail(email)
+        Usuario usuario = usuarioRepository
+                .findByEmail(email)
                 .orElseThrow(() ->
                         new ResponseStatusException(
                                 HttpStatus.NOT_FOUND,
@@ -68,23 +88,32 @@ public class EmpleadoRestController {
                         )
                 );
 
-        // 3. Obtener el rango del día actual.
+        // ========================================
+        // 3. CONSULTAR ACTIVIDADES DEL DÍA
+        // ========================================
+
         LocalDate hoy = LocalDate.now();
 
-        LocalDateTime inicioDia = hoy.atStartOfDay();
+        LocalDateTime inicioDia =
+                hoy.atStartOfDay();
 
-        LocalDateTime finDia = hoy.atTime(LocalTime.MAX);
+        LocalDateTime finDia =
+                hoy.atTime(LocalTime.MAX);
 
-        // 4. Consultar las actividades reales en MySQL.
         List<Actividad> actividadesHoy =
-                actividadRepository.findByUsuarioIdAndFechaBetween(
-                        usuario.getId(),
-                        inicioDia,
-                        finDia
-                );
+                actividadRepository
+                        .findByUsuarioIdAndFechaBetween(
+                                usuario.getId(),
+                                inicioDia,
+                                finDia
+                        );
 
-        // 5. Contar únicamente las pausas completadas.
-        long completadasHoy = actividadesHoy.stream()
+        // ========================================
+        // 4. PAUSAS COMPLETADAS
+        // ========================================
+
+        long completadasHoy = actividadesHoy
+                .stream()
                 .filter(actividad ->
                         Actividad.ESTADO_COMPLETADA.equals(
                                 actividad.getEstado()
@@ -92,35 +121,14 @@ public class EmpleadoRestController {
                 )
                 .count();
 
-        // 6. Calcular el avance hacia la meta diaria.
-        int pendientesHoy = (int) Math.max(
-                0,
-                META_DIARIA - completadasHoy
-        );
+        // ========================================
+        // 5. PAUSAS EN PROCESO
+        //
+        // Se encuentran ejecutándose.
+        // ========================================
 
-        int porcentajeCumplimiento = (int) Math.min(
-                100,
-                (completadasHoy * 100) / META_DIARIA
-        );
-
-        // 7. Contar los otros estados.
-        long incompletasHoy = actividadesHoy.stream()
-                .filter(actividad ->
-                        Actividad.ESTADO_INCOMPLETA.equals(
-                                actividad.getEstado()
-                        )
-                )
-                .count();
-
-        long canceladasHoy = actividadesHoy.stream()
-                .filter(actividad ->
-                        Actividad.ESTADO_CANCELADA.equals(
-                                actividad.getEstado()
-                        )
-                )
-                .count();
-
-        long enProcesoHoy = actividadesHoy.stream()
+        long enProcesoHoy = actividadesHoy
+                .stream()
                 .filter(actividad ->
                         Actividad.ESTADO_EN_PROCESO.equals(
                                 actividad.getEstado()
@@ -128,18 +136,73 @@ public class EmpleadoRestController {
                 )
                 .count();
 
-        // 8. Construir la respuesta para Angular.
-        ResumenEmpleado resumen = new ResumenEmpleado(
-                usuario.getNombre(),
-                usuario.getEmail(),
-                META_DIARIA,
-                completadasHoy,
-                pendientesHoy,
-                porcentajeCumplimiento,
-                incompletasHoy,
-                canceladasHoy,
-                enProcesoHoy
+        // ========================================
+        // 6. PAUSAS INCOMPLETAS
+        //
+        // Incluye:
+        // - INCOMPLETA: aplazada
+        // - EN_PROCESO: iniciada, sin finalizar
+        //
+        // EN_PROCESO está incluido dentro
+        // de INCOMPLETAS para las estadísticas.
+        // ========================================
+
+        long incompletasHoy = actividadesHoy
+                .stream()
+                .filter(actividad ->
+                        Actividad.ESTADO_INCOMPLETA.equals(
+                                actividad.getEstado()
+                        ) ||
+                                Actividad.ESTADO_EN_PROCESO.equals(
+                                        actividad.getEstado()
+                                )
+                )
+                .count();
+
+        // ========================================
+        // 7. PAUSAS CANCELADAS
+        // ========================================
+
+        long canceladasHoy = actividadesHoy
+                .stream()
+                .filter(actividad ->
+                        Actividad.ESTADO_CANCELADA.equals(
+                                actividad.getEstado()
+                        )
+                )
+                .count();
+
+        // ========================================
+        // 8. META DIARIA
+        // ========================================
+
+        int pendientesHoy = (int) Math.max(
+                0,
+                META_DIARIA - completadasHoy
         );
+
+        int porcentajeCumplimiento =
+                (int) Math.min(
+                        100,
+                        (completadasHoy * 100) / META_DIARIA
+                );
+
+        // ========================================
+        // 9. CONSTRUIR RESPUESTA
+        // ========================================
+
+        ResumenEmpleado resumen =
+                new ResumenEmpleado(
+                        usuario.getNombre(),
+                        usuario.getEmail(),
+                        META_DIARIA,
+                        completadasHoy,
+                        pendientesHoy,
+                        porcentajeCumplimiento,
+                        incompletasHoy,
+                        canceladasHoy,
+                        enProcesoHoy
+                );
 
         return ResponseEntity.ok(resumen);
     }
