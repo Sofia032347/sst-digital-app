@@ -1,14 +1,96 @@
 <div>
-  <app-page-breadcrumb pageTitle="Profile" />
-  <div class="rounded-2xl border border-gray-200 bg-white p-5 lg:p-6 dark:border-gray-800 dark:bg-white/3">
-    <h3 class="mb-5 text-lg font-semibold text-gray-800 lg:mb-7 dark:text-white/90">
-      Profile
-    </h3>
-    <div class="space-y-6">
-      <app-personal-information class="block" />
-      <app-address class="block" />
-      <app-security class="block" />
-      <app-danger class="block" />
-    </div>
+
+  <!-- ENCABEZADO -->
+
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+
+    <h1 class="text-xl font-semibold text-gray-800 dark:text-white/90">
+      Mi cuenta
+    </h1>
+
+    <nav aria-label="Ruta de navegación">
+      <ol class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+
+        <li>
+          <a
+                  routerLink="/sst/empleado"
+                  class="transition-colors hover:text-brand-500"
+          >
+            Inicio
+          </a>
+        </li>
+
+        <li aria-hidden="true">›</li>
+
+        <li class="font-medium text-gray-800 dark:text-white/90">
+          Mi cuenta
+        </li>
+
+      </ol>
+    </nav>
+
   </div>
+
+  <!-- CONTENEDOR ORIGINAL DE TAILADMIN -->
+
+  <div
+          class="rounded-2xl border border-gray-200 bg-white
+           p-5 lg:p-6 dark:border-gray-800 dark:bg-white/3"
+  >
+
+    <h3
+            class="mb-5 text-lg font-semibold text-gray-800
+             lg:mb-7 dark:text-white/90"
+    >
+      Mi cuenta
+    </h3>
+
+    <div class="space-y-6">
+
+      <!-- INFORMACIÓN PERSONAL -->
+
+      @if (cargando) {
+
+      <div class="rounded-xl bg-gray-50 p-5 text-sm text-gray-500 dark:bg-gray-800">
+        Cargando información del empleado...
+      </div>
+
+      } @else if (errorMensaje) {
+
+      <div class="rounded-xl border border-red-200 bg-red-50 p-5 dark:border-red-900 dark:bg-red-950/30">
+
+        <p class="text-sm text-red-700 dark:text-red-300">
+          {{ errorMensaje }}
+        </p>
+
+        <button
+                type="button"
+                (click)="cargarPerfil()"
+                class="mt-3 rounded-lg bg-brand-500 px-4 py-2
+                   text-sm font-medium text-white hover:bg-brand-600"
+        >
+          Reintentar
+        </button>
+
+      </div>
+
+      } @else {
+
+      <app-personal-information
+              class="block"
+              [data]="perfil"
+      />
+
+      }
+
+      <!-- SEGURIDAD ORIGINAL TAILADMIN -->
+
+      <app-security class="block" />
+
+      <!-- No mostramos Address ni Danger. -->
+
+    </div>
+
+  </div>
+
 </div>

@@ -1,263 +1,391 @@
-import { CommonModule } from '@angular/common';
-
 import {
   ChangeDetectorRef,
   Component,
+  DestroyRef,
   ElementRef,
   HostListener,
-  OnDestroy,
   OnInit,
   inject
 } from '@angular/core';
 
-import { RouterModule } from '@angular/router';
+import { CommonModule } from '@angular/common';
 
 import {
-  interval,
-  Subscription,
-  timeout
+  catchError,
+  exhaustMap,
+  firstValueFrom,
+  merge,
+  of,
+  timer
 } from 'rxjs';
 
-import {
-  DropdownComponent
-} from '../../../shared/components/ui/dropdown/dropdown.component';
+import { takeUntilDestroyed } from
+      '@angular/core/rxjs-interop';
 
-import {
-  DropdownItemComponent
-} from '../../../shared/components/ui/dropdown/dropdown-item/dropdown-item.component';
-
-import {
-  DropdownService
-} from '../../../core/services/dropdown.service';
-
-import {
-  ButtonComponent
-} from '../../../shared/components/ui/button/button.component';
+import Swal from 'sweetalert2';
 
 import {
   Notificacion,
   NotificacionService
 } from '../../../services/notificacion.service';
 
-// ============================================
-// MODELO TEMPORAL PARA EL HTML ACTUAL
-// ============================================
-
-interface NotificationItem {
-  id: number;
-
-  // Datos reales de SST Digital
-  tipo: Notificacion['tipo'];
-  titulo: string;
-  mensaje: string;
-  estado: Notificacion['estado'];
-  fechaCreacion: string;
-  proximoAviso: string | null;
-  vecesPospuesta: number;
-
-  // Compatibilidad con el HTML de TailAdmin.
-  // Eliminaremos estos campos en el siguiente paso.
-  name: string;
-  avatar: string;
-  action: string;
-  project: string;
-  time: string;
-  status: 'online' | 'offline' | 'busy';
-}
-
 @Component({
   selector: 'app-notification-dropdown',
-
-  templateUrl: './notification-dropdown.component.html',
-
-  imports: [
-    ButtonComponent,
-    CommonModule,
-    RouterModule,
-    DropdownComponent,
-    DropdownItemComponent
-  ]
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './notification-dropdown.component.html'
 })
-export class NotificationDropdownComponent
-    implements OnInit, OnDestroy {
+export class NotificationDropdownComponent implements OnInit {
 
-  readonly dropdownId = 'notification-dropdown';
-
-  private readonly notificacionService =
+  private readonly servicio =
       inject(NotificacionService);
 
   private readonly cdr =
       inject(ChangeDetectorRef);
 
-  private readonly elementRef =
-      inject(ElementRef);
+  private readonly destroyRef =
+      inject(DestroyRef);
 
-  private readonly dropdownService =
-      inject(DropdownService);
+  private readonly elemento =
+      inject(ElementRef<HTMLElement>);
 
-  private readonly subscriptions =
-      new Subscription();
-
-  // ==========================================
-  // ESTADO DEL COMPONENTE
-  // ==========================================
+  private destruido = false;
 
   isOpen = false;
-
-  notifying = false;
-
-  cargando = false;
-
+  cargando = true;
   errorCarga = false;
+  procesando = false;
 
-  notifications: NotificationItem[] = [];
-
+  notifications: Notificacion[] = [];
   totalPendientes = 0;
-
-  // ==========================================
-  // INICIALIZACIÓN
-  // ==========================================
+  notifying = false;
 
   ngOnInit(): void {
 
-    // Mantener funcionamiento original
-    // del desplegable de TailAdmin.
-    this.subscriptions.add(
+    this.destroyRef.onDestroy(() => {
+      this.destruido = true;
+    });
 
-        this.dropdownService.activeDropdown$
-            .subscribe(activeId => {
+    // Actualizar el historial periódicamente.
+    timer(0, 15000)
+        .pipe(
+            exhaustMap(() =>
+                this.servicio.obtenerHistorial().pipe(
+                    catchError(error => {
 
-              this.isOpen =
-                  activeId === this.dropdownId;
+                      console.error(
+                          'Historial de notificaciones:',
+                          error
+                      );
 
-              this.cdr.detectChanges();
+                      this.cargando = false;
+                      this.errorCarga = true;
 
-            })
+                      return of(null);
+                    })
+                )
+            ),
 
-    );
+            takeUntilDestroyed(this.destroyRef)
+        )
+        .subscribe(items => {
 
-    // Obtener las notificaciones al cargar.
-    this.cargarNotificaciones();
+          if (items !== null) {
+            this.actualizar(items);
+          }
+        });
 
-    // Actualizar periódicamente mientras
-    // el componente permanezca activo.
-    this.subscriptions.add(
-
-        interval(30000).subscribe(() => {
-          this.cargarNotificaciones();
-        })
-
-    );
+    // Ambos eventos actualizan la campana.
+    // Ninguno abre SweetAlert de pausa.
+    merge(
+        this.servicio.cambios$,
+        this.servicio.lecturas$
+    )
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => {
+          void this.cargarNotificaciones();
+        });
   }
 
-  // ==========================================
-  // CONSULTAR NOTIFICACIONES REALES
-  // ==========================================
+  private actualizar(
+      items: Notificacion[]
+  ): void {
 
-  cargarNotificaciones(): void {
-
-    if (this.cargando) {
+    if (this.destruido) {
       return;
     }
 
-    this.cargando = true;
+    this.notifications = items;
+
+    this.totalPendientes = items.filter(
+        n => !n.leida
+    ).length;
+
+    this.notifying =
+        this.totalPendientes > 0;
+
+    this.cargando = false;
     this.errorCarga = false;
 
-    this.subscriptions.add(
+    this.cdr.detectChanges();
+  }
 
-        this.notificacionService
-            .obtenerHistorial()
-            .pipe(timeout(12000))
-            .subscribe({
+  async cargarNotificaciones(): Promise<void> {
 
-              next: (datos: Notificacion[]) => {
+    try {
 
-                this.notifications = datos.map(
-                    item => this.convertirNotificacion(item)
-                );
+      const items = await firstValueFrom(
+          this.servicio.obtenerHistorial()
+      );
 
-                this.totalPendientes = datos.filter(
-                    item =>
-                        item.estado === 'PENDIENTE' ||
-                        item.estado === 'POSPUESTA'
-                ).length;
+      this.actualizar(items);
 
-                this.notifying =
-                    this.totalPendientes > 0;
+    } catch (error) {
 
-                this.cargando = false;
-                this.errorCarga = false;
+      console.error(
+          'No se pudo cargar el historial:',
+          error
+      );
 
-                this.cdr.detectChanges();
-              },
+      this.cargando = false;
+      this.errorCarga = true;
 
-              error: error => {
+      if (!this.destruido) {
+        this.cdr.detectChanges();
+      }
+    }
+  }
 
-                console.error(
-                    'Error al consultar notificaciones:',
-                    error
-                );
+  toggleDropdown(event: MouseEvent): void {
 
-                this.errorCarga = true;
-                this.cargando = false;
+    event.stopPropagation();
 
-                this.cdr.detectChanges();
-              }
+    this.isOpen = !this.isOpen;
 
-            })
+    if (this.isOpen) {
+      void this.cargarNotificaciones();
+    }
+  }
 
-    );
+  closeDropdown(): void {
+
+    this.isOpen = false;
+
+    if (!this.destruido) {
+      this.cdr.detectChanges();
+    }
+  }
+
+  @HostListener('document:click', ['$event'])
+  cerrarFuera(event: MouseEvent): void {
+
+    if (
+        this.isOpen &&
+        event.target instanceof Node &&
+        !this.elemento.nativeElement.contains(
+            event.target
+        )
+    ) {
+      this.closeDropdown();
+    }
+  }
+
+  private escapar(texto: string): string {
+
+    return texto
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
   }
 
   // ==========================================
-  // ADAPTAR DATOS AL HTML EXISTENTE
+  // DETALLE DE UNA NOTIFICACIÓN
   // ==========================================
+  // El historial no permite iniciar ni posponer.
+  // Esas decisiones corresponden al SweetAlert
+  // automático del dashboard.
 
-  private convertirNotificacion(
-      item: Notificacion
-  ): NotificationItem {
+  async verNotificacion(
+      n: Notificacion
+  ): Promise<void> {
 
-    return {
+    if (this.procesando) {
+      return;
+    }
 
-      id: item.id,
+    this.procesando = true;
 
-      tipo: item.tipo,
-      titulo: item.titulo,
-      mensaje: item.mensaje,
-      estado: item.estado,
+    try {
 
-      fechaCreacion: item.fechaCreacion,
-      proximoAviso: item.proximoAviso,
-      vecesPospuesta: item.vecesPospuesta,
+      if (!n.leida) {
+        await this.servicio.marcarLeida(n.id);
+      }
 
-      // Estos campos permiten que el HTML
-      // anterior siga compilando por ahora.
-      name: item.titulo,
+      this.closeDropdown();
 
-      avatar: '/images/logo/logo-icon.svg',
+      const filas: Array<[string, string]> = [
+        [
+          'Tipo',
+          this.obtenerNombreTipo(n.tipo)
+        ],
+        [
+          'Estado',
+          this.obtenerNombreEstado(n.estado)
+        ],
+        [
+          'Creada',
+          this.formatearFecha(n.fechaCreacion)
+        ]
+      ];
 
-      action: item.mensaje,
+      if (n.fechaProgramada) {
+        filas.push([
+          'Programada',
+          this.formatearFecha(n.fechaProgramada)
+        ]);
+      }
 
-      project: this.obtenerNombreEstado(
-          item.estado
-      ),
+      if (n.proximoAviso) {
+        filas.push([
+          'Próximo aviso',
+          this.formatearFecha(n.proximoAviso)
+        ]);
+      }
 
-      time: this.formatearFecha(
-          item.fechaCreacion
-      ),
+      if (n.tipo === 'RECORDATORIO') {
+        filas.push([
+          'Veces pospuesta',
+          String(n.vecesPospuesta)
+        ]);
+      }
 
-      status: this.obtenerEstadoVisual(
-          item.estado
-      )
-    };
+      if (n.fechaAtencion) {
+        filas.push([
+          'Atendida',
+          this.formatearFecha(n.fechaAtencion)
+        ]);
+      }
+
+      const detalle = filas.map(
+          ([titulo, valor]) => `
+          <div class="flex justify-between gap-3
+                      border-b border-gray-100 py-2
+                      dark:border-gray-700">
+            <span class="text-xs text-gray-500">
+              ${this.escapar(titulo)}
+            </span>
+            <span class="text-right text-xs font-semibold
+                         text-gray-800 dark:text-gray-200">
+              ${this.escapar(valor)}
+            </span>
+          </div>
+        `
+      ).join('');
+
+      await Swal.fire({
+        title: n.titulo,
+        icon: 'info',
+        width: 500,
+
+        html: `
+          <div class="text-left">
+            <p class="mb-3 text-sm text-gray-600
+                      dark:text-gray-300">
+              ${this.escapar(n.mensaje)}
+            </p>
+
+            <div class="rounded-xl bg-gray-50 px-3
+                        py-2 dark:bg-gray-800">
+              ${detalle}
+            </div>
+          </div>
+        `,
+
+        confirmButtonText:
+            'Volver al historial',
+
+        showCancelButton: false,
+        showDenyButton: false
+      });
+
+    } catch (error) {
+
+      console.error(
+          'No se pudo abrir el detalle:',
+          error
+      );
+
+      await Swal.fire({
+        icon: 'error',
+        title: 'No se pudo abrir el historial'
+      });
+
+    } finally {
+
+      this.procesando = false;
+
+      if (!this.destruido) {
+        void this.cargarNotificaciones();
+      }
+    }
   }
 
   // ==========================================
-  // NOMBRES DE ESTADOS EN ESPAÑOL
+  // MARCAR TODAS COMO LEÍDAS
   // ==========================================
+
+  async marcarTodasLeidas(): Promise<void> {
+
+    if (
+        this.procesando ||
+        !this.totalPendientes
+    ) {
+      return;
+    }
+
+    this.procesando = true;
+
+    try {
+
+      await this.servicio.marcarTodasLeidas();
+
+      this.actualizar(
+          this.notifications.map(
+              n => ({
+                ...n,
+                leida: true
+              })
+          )
+      );
+
+      // IMPORTANTE:
+      // No mostrar SweetAlert.
+      // No llamar a sincronizar().
+      // No cambiar proximoAviso.
+
+    } catch (error) {
+
+      console.error(
+          'Error marcando notificaciones leídas:',
+          error
+      );
+
+      this.errorCarga = true;
+
+    } finally {
+
+      this.procesando = false;
+
+      if (!this.destruido) {
+        this.cdr.detectChanges();
+      }
+    }
+  }
 
   obtenerNombreEstado(
-      estado: Notificacion['estado']
+      estado: string
   ): string {
 
     switch (estado) {
@@ -272,120 +400,51 @@ export class NotificationDropdownComponent
         return 'Atendida';
 
       default:
-        return 'Notificación';
+        return estado;
     }
   }
 
-  // ==========================================
-  // ESTADO VISUAL COMPATIBLE CON TAILADMIN
-  // ==========================================
-
-  private obtenerEstadoVisual(
-      estado: Notificacion['estado']
-  ): 'online' | 'offline' | 'busy' {
-
-    switch (estado) {
-
-      case 'ATENDIDA':
-        return 'online';
-
-      case 'POSPUESTA':
-        return 'busy';
-
-      case 'PENDIENTE':
-      default:
-        return 'offline';
-    }
-  }
-
-  // ==========================================
-  // FECHA EN ESPAÑOL
-  // ==========================================
-
-  formatearFecha(
-      fecha: string | null
+  obtenerNombreTipo(
+      tipo: string
   ): string {
 
-    if (!fecha) {
+    switch (tipo) {
+
+      case 'RECORDATORIO':
+        return 'Recordatorio de pausa';
+
+      case 'RECORDATORIO_POSPUESTO':
+        return 'Recordatorio pospuesto';
+
+      case 'RECORDATORIO_REACTIVADO':
+        return 'Recordatorio reactivado';
+
+      case 'PAUSA_COMPLETADA':
+        return 'Pausa completada';
+
+      default:
+        return tipo.replace(/_/g, ' ');
+    }
+  }
+
+  formatearFecha(
+      valor: string | null
+  ): string {
+
+    if (!valor) {
       return 'Sin fecha';
     }
 
-    const fechaConvertida =
-        new Date(fecha);
+    const fecha = new Date(valor);
 
-    if (
-        Number.isNaN(
-            fechaConvertida.getTime()
-        )
-    ) {
-      return fecha;
-    }
-
-    return fechaConvertida.toLocaleString(
-        'es-CO',
-        {
+    return Number.isFinite(fecha.getTime())
+        ? new Intl.DateTimeFormat('es-CO', {
           day: '2-digit',
           month: 'short',
           year: 'numeric',
           hour: '2-digit',
           minute: '2-digit'
-        }
-    );
-  }
-
-  // ==========================================
-  // ABRIR Y CERRAR LA CAMPANA
-  // ==========================================
-
-  toggleDropdown(event?: Event): void {
-
-    event?.stopPropagation();
-
-    this.dropdownService.toggle(
-        this.dropdownId
-    );
-
-    // Actualizar información al abrir.
-    if (this.isOpen) {
-      this.cargarNotificaciones();
-    }
-  }
-
-  closeDropdown(): void {
-
-    this.dropdownService.close(
-        this.dropdownId
-    );
-  }
-
-  // ==========================================
-  // CERRAR AL HACER CLIC FUERA
-  // ==========================================
-
-  @HostListener(
-      'document:click',
-      ['$event']
-  )
-  onDocumentClick(
-      event: MouseEvent
-  ): void {
-
-    if (
-        this.isOpen &&
-        !this.elementRef.nativeElement.contains(
-            event.target
-        )
-    ) {
-      this.closeDropdown();
-    }
-  }
-
-  // ==========================================
-  // LIBERAR RECURSOS
-  // ==========================================
-
-  ngOnDestroy(): void {
-
-    this.subscriptions.unsubscribe();
+        }).format(fecha)
+        : 'Fecha no disponible';
   }
 }

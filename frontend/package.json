@@ -23,6 +23,8 @@
         "@angular/router": "^22.1.4",
         "@floating-ui/dom": "^1.8.0",
         "@fullcalendar/angular": "^7.0.2",
+        "@ng-icons/core": "^36.1.0",
+        "@ng-icons/heroicons": "^36.1.0",
         "@spartan-ng/brain": "1.6.3",
         "@tailwindcss/postcss": "^4.1.11",
         "apexcharts": "^7.1.0",

@@ -1,601 +1,367 @@
-<div class="xl:relative">
+<div class="relative">
 
-  <!-- ====================================== -->
-  <!-- BOTÓN DE LA CAMPANA -->
-  <!-- ====================================== -->
-
+  <!-- CAMPANA -->
   <button
-          app-button
-          variant="unstyled"
           type="button"
-          class="relative inline-flex size-10 shrink-0
-           items-center justify-center rounded-[10px]
-           border border-gray-300 bg-transparent
-           text-gray-500 shadow-theme-xs
-           transition-all hover:bg-gray-50
-           hover:text-gray-800 dark:border-gray-700
-           dark:bg-gray-800 dark:text-gray-400
-           dark:hover:bg-gray-700/50
-           dark:hover:text-white lg:size-11"
           (click)="toggleDropdown($event)"
-          aria-label="Abrir notificaciones"
           [attr.aria-expanded]="isOpen"
+          aria-label="Abrir notificaciones"
+          class="relative inline-flex size-10 items-center
+           justify-center rounded-xl border
+           border-gray-300 text-gray-600
+           transition hover:bg-gray-100
+           dark:border-gray-700
+           dark:text-gray-300
+           dark:hover:bg-gray-800"
   >
 
-    <!-- Indicador de avisos pendientes -->
-
     @if (notifying) {
-
     <span
-            class="absolute -top-1 -end-1 z-10
+            class="absolute -right-1 -top-1 z-10
                flex h-5 min-w-5 items-center
                justify-center rounded-full
-               bg-orange-500 px-1 text-[10px]
-               font-bold text-white"
+               bg-orange-500 px-1
+               text-[10px] font-bold text-white"
     >
-        {{ totalPendientes > 99 ? '99+' : totalPendientes }}
+        {{
+          totalPendientes > 99
+            ? '99+'
+            : totalPendientes
+        }}
       </span>
-
     }
 
-    <!-- Icono de la campana -->
-
     <svg
-            class="size-5 fill-current"
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
-            xmlns="http://www.w3.org/2000/svg"
+            width="21"
+            height="21"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
             aria-hidden="true"
     >
       <path
-              fill-rule="evenodd"
-              clip-rule="evenodd"
-              d="M10.75 2.29248C10.75 1.87827 10.4143
-           1.54248 10 1.54248C9.58583 1.54248
-           9.25004 1.87827 9.25004 2.29248V2.83613
-           C6.08266 3.20733 3.62504 5.9004 3.62504
-           9.16748V14.4591H3.33337C2.91916 14.4591
-           2.58337 14.7949 2.58337 15.2091C2.58337
-           15.6234 2.91916 15.9591 3.33337
-           15.9591H16.6667C17.0809 15.9591
-           17.4167 15.6234 17.4167 15.2091
-           C17.4167 14.7949 17.0809 14.4591
-           16.6667 14.4591H16.375V9.16748
-           C16.375 5.9004 13.9174 3.20733
-           10.75 2.83613V2.29248ZM14.875
-           14.4591V9.16748C14.875 6.47509
-           12.6924 4.29248 10 4.29248
-           C7.30765 4.29248 5.12504 6.47509
-           5.12504 9.16748V14.4591H14.875ZM8.00004
-           17.7085C8.00004 18.1228 8.33583
-           18.4585 8.75004 18.4585H11.25
-           C11.6643 18.4585 12 18.1228
-           12 17.7085C12 17.2943 11.6643
-           16.9585 11.25 16.9585H8.75004
-           C8.33583 16.9585 8.00004 17.2943
-           8.00004 17.7085Z"
-              fill="currentColor"
+              d="M18 8a6 6 0 0 0-12 0
+           c0 7-3 7-3 9h18
+           c0-2-3-2-3-9"
       />
+      <path d="M10 21h4" />
     </svg>
 
   </button>
 
-  <!-- ====================================== -->
-  <!-- DESPLEGABLE DE NOTIFICACIONES -->
-  <!-- ====================================== -->
 
-  <app-dropdown
-          [isOpen]="isOpen"
-          (close)="closeDropdown()"
-          className="absolute start-4 end-auto
-               mt-[17px] flex h-[480px]
-               w-[350px] flex-col rounded-2xl
-               border border-gray-200 bg-white
-               p-4 shadow-theme-lg
-               dark:border-gray-800
-               dark:bg-gray-900
-               sm:start-6 sm:w-[380px]
-               xl:start-auto xl:end-0"
+  <!-- DESPLEGABLE -->
+  @if (isOpen) {
+
+  <div
+          class="absolute end-0 z-50 mt-4 flex
+             h-[470px] w-[calc(100vw-24px)]
+             max-w-[390px] flex-col
+             rounded-2xl border
+             border-gray-200 bg-white
+             p-4 shadow-xl
+             dark:border-gray-800
+             dark:bg-gray-900"
   >
 
-    <!-- ==================================== -->
-    <!-- ENCABEZADO -->
-    <!-- ==================================== -->
-
+    <!-- TÍTULO -->
     <div
             class="mb-3 flex items-center
-             justify-between border-b
-             border-gray-100 pb-3
-             dark:border-gray-800"
+               justify-between border-b
+               border-gray-100 pb-3
+               dark:border-gray-800"
     >
-
       <div>
-
         <h5
-                class="text-base font-semibold
-                 text-gray-800 dark:text-white"
+                class="font-semibold
+                   text-gray-900 dark:text-white"
         >
           Notificaciones
         </h5>
 
-        <p
-                class="mt-1 text-xs text-gray-500
-                 dark:text-gray-400"
-        >
-          Recordatorios de SST Digital
+        <p class="text-xs text-gray-500">
+          Historial de recordatorios y pausas
         </p>
-
       </div>
 
       <button
-              app-button
-              variant="unstyled"
               type="button"
               (click)="closeDropdown()"
-              class="rounded-lg p-2 text-gray-500
-               hover:bg-gray-100
-               dark:text-gray-400
-               dark:hover:bg-gray-800"
-              aria-label="Cerrar notificaciones"
+              aria-label="Cerrar historial"
+              class="rounded-lg px-2 py-1
+                 text-xs text-gray-500
+                 hover:bg-gray-100"
       >
-
-        <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-        >
-          <path d="M18 6 6 18M6 6l12 12"/>
-        </svg>
-
+        Cerrar
       </button>
-
     </div>
 
-    <!-- ==================================== -->
-    <!-- RESUMEN DE PENDIENTES -->
-    <!-- ==================================== -->
 
+    <!-- CONTADOR DE SIN LEER -->
     <div
             class="mb-3 flex items-center
-             justify-between rounded-lg
-             bg-gray-50 px-3 py-2
-             dark:bg-gray-800"
+               justify-between rounded-xl
+               bg-gray-50 px-3 py-2
+               dark:bg-gray-800"
     >
+        <span
+                class="text-xs text-gray-600
+                 dark:text-gray-300"
+        >
+          Sin leer
+        </span>
 
       <span
-              class="text-xs font-medium
-               text-gray-600 dark:text-gray-300"
+              class="rounded-full bg-orange-100
+                 px-2.5 py-1 text-xs
+                 font-semibold text-orange-700"
       >
-        Pendientes de atención
-      </span>
-
-      <span
-              class="rounded-full px-2.5 py-1
-               text-xs font-semibold"
-              [ngClass]="{
-          'bg-orange-100 text-orange-700':
-            totalPendientes > 0,
-
-          'bg-green-100 text-green-700':
-            totalPendientes === 0
-        }"
-      >
-        {{ totalPendientes }}
-      </span>
-
+          {{ totalPendientes }}
+        </span>
     </div>
 
-    <!-- ==================================== -->
-    <!-- CONTENIDO -->
-    <!-- ==================================== -->
 
+    <!-- LISTA -->
     <div
             class="custom-scrollbar flex-1
-             overflow-y-auto"
+               space-y-2 overflow-y-auto"
     >
 
-      <!-- ESTADO DE CARGA -->
+      @if (
+      cargando &&
+      notifications.length === 0
+      ) {
 
-      @if (cargando && notifications.length === 0) {
-
-      <div
-              class="flex flex-col items-center
-                 justify-center py-14 text-center"
+      <p
+              class="py-10 text-center
+                   text-sm text-gray-500"
       >
+        Cargando historial...
+      </p>
 
-        <div
-                class="mb-3 h-8 w-8 animate-spin
-                   rounded-full border-4
-                   border-gray-200
-                   border-t-blue-600"
-        ></div>
+      } @else if (
+      errorCarga &&
+      notifications.length === 0
+      ) {
 
-        <p
-                class="text-sm text-gray-500
-                   dark:text-gray-400"
-        >
-          Cargando notificaciones...
-        </p>
-
-      </div>
-
-      } @else if (errorCarga && notifications.length === 0) {
-
-      <!-- ERROR DE CONEXIÓN -->
-
-      <div
-              class="flex flex-col items-center
-                 justify-center px-4 py-12
-                 text-center"
+      <p
+              class="py-8 text-center
+                   text-sm text-red-600"
       >
+        No se pudieron cargar las notificaciones.
+      </p>
 
-        <div
-                class="mb-3 flex h-12 w-12
-                   items-center justify-center
-                   rounded-full bg-red-50
-                   text-red-500"
-        >
-          <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M12 8v4M12 16h.01"/>
-          </svg>
-        </div>
+      } @else if (
+      notifications.length === 0
+      ) {
 
-        <p
-                class="text-sm font-medium
-                   text-gray-800 dark:text-white"
-        >
-          No pudimos cargar tus notificaciones
-        </p>
-
-        <button
-                type="button"
-                (click)="cargarNotificaciones()"
-                class="mt-4 rounded-lg bg-blue-600
-                   px-4 py-2 text-xs font-semibold
-                   text-white hover:bg-blue-700"
-        >
-          Reintentar
-        </button>
-
-      </div>
-
-      } @else if (notifications.length === 0) {
-
-      <!-- SIN NOTIFICACIONES -->
-
-      <div
-              class="flex flex-col items-center
-                 justify-center px-4 py-12
-                 text-center"
+      <p
+              class="py-10 text-center
+                   text-sm text-gray-500"
       >
-
-        <div
-                class="mb-4 flex h-16 w-16
-                   items-center justify-center
-                   rounded-full bg-green-50
-                   text-green-600
-                   dark:bg-green-900/20"
-        >
-
-          <svg
-                  width="30"
-                  height="30"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.8"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-          >
-            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
-            <path d="M10 21h4"/>
-          </svg>
-
-        </div>
-
-        <p
-                class="font-semibold text-gray-800
-                   dark:text-white"
-        >
-          No tienes notificaciones
-        </p>
-
-        <p
-                class="mt-2 text-sm leading-5
-                   text-gray-500 dark:text-gray-400"
-        >
-          Aquí aparecerán tus recordatorios
-          y las novedades de tus pausas activas.
-        </p>
-
-      </div>
+        Todavía no tienes notificaciones.
+      </p>
 
       } @else {
 
-      <!-- ================================== -->
-      <!-- LISTADO DE NOTIFICACIONES -->
-      <!-- ================================== -->
+      @for (
+      item of notifications;
+      track item.id
+      ) {
 
-      <ul class="flex flex-col gap-2">
+      <button
+              type="button"
+              (click)="verNotificacion(item)"
+              [disabled]="procesando"
+              class="w-full rounded-xl border
+                     p-3 text-left transition
+                     hover:border-blue-300
+                     hover:bg-blue-50/30
+                     disabled:opacity-60
+                     dark:hover:bg-gray-800"
+              [ngClass]="
+                !item.leida
+                  ? 'border-blue-200 bg-blue-50/50 dark:border-blue-900'
+                  : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
+              "
+      >
 
-        @for (item of notifications; track item.id) {
+        <div class="flex items-start gap-3">
 
-        <li>
-
-          <div
-                  class="rounded-xl border p-3
-                       transition-colors"
-
-                  [ngClass]="{
-
-                  'border-orange-200 bg-orange-50/60 dark:border-orange-900 dark:bg-orange-950/20':
-                    item.estado === 'PENDIENTE',
-
-                  'border-blue-200 bg-blue-50/60 dark:border-blue-900 dark:bg-blue-950/20':
-                    item.estado === 'POSPUESTA',
-
-                  'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900':
-                    item.estado === 'ATENDIDA'
-
-                }"
+          <!-- INDICADOR -->
+          <span
+                  class="mt-1 flex size-8
+                         shrink-0 items-center
+                         justify-center rounded-lg
+                         text-xs font-bold"
+                  [ngClass]="
+                    item.tipo === 'PAUSA_COMPLETADA'
+                      ? 'bg-green-100 text-green-700'
+                      : item.tipo === 'RECORDATORIO_POSPUESTO'
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-blue-100 text-blue-700'
+                  "
           >
+                  {{
+                    item.tipo === 'PAUSA_COMPLETADA'
+                      ? 'C'
+                      : item.tipo === 'RECORDATORIO_POSPUESTO'
+                        ? 'P'
+                        : 'N'
+                  }}
+                </span>
 
-            <div class="flex items-start gap-3">
 
-              <!-- ICONO DE ESTADO -->
+          <div class="min-w-0 flex-1">
 
-              <div
-                      class="flex h-10 w-10 shrink-0
-                           items-center justify-center
-                           rounded-full"
-
-                      [ngClass]="{
-
-                      'bg-orange-100 text-orange-600':
-                        item.estado === 'PENDIENTE',
-
-                      'bg-blue-100 text-blue-600':
-                        item.estado === 'POSPUESTA',
-
-                      'bg-green-100 text-green-600':
-                        item.estado === 'ATENDIDA'
-
-                    }"
+            <div
+                    class="flex items-start
+                           justify-between gap-2"
+            >
+              <p
+                      class="text-sm font-semibold
+                             text-gray-900
+                             dark:text-white"
               >
+                {{ item.titulo }}
+              </p>
 
-                @if (item.estado === 'ATENDIDA') {
-
-                <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        aria-hidden="true"
-                >
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="m8 12 3 3 5-6"/>
-                </svg>
-
-                } @else if (item.estado === 'POSPUESTA') {
-
-                <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        aria-hidden="true"
-                >
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="M12 6v6l4 2"/>
-                </svg>
-
-                } @else {
-
-                <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        aria-hidden="true"
-                >
-                  <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
-                  <path d="M10 21h4"/>
-                </svg>
-
-                }
-
-              </div>
-
-              <!-- CONTENIDO -->
-
-              <div class="min-w-0 flex-1">
-
-                <p
-                        class="text-sm font-semibold
-                             text-gray-800 dark:text-white"
-                >
-                  {{ item.titulo }}
-                </p>
-
-                <p
-                        class="mt-1 text-xs leading-5
-                             text-gray-600
-                             dark:text-gray-400"
-                >
-                  {{ item.mensaje }}
-                </p>
-
-                <!-- ESTADO -->
-
-                <div
-                        class="mt-2 flex flex-wrap
-                             items-center gap-2"
-                >
-
-                      <span
-                              class="rounded-full px-2 py-1
-                               text-[11px] font-medium"
-
-                              [ngClass]="{
-
-                          'bg-orange-100 text-orange-700':
-                            item.estado === 'PENDIENTE',
-
-                          'bg-blue-100 text-blue-700':
-                            item.estado === 'POSPUESTA',
-
-                          'bg-green-100 text-green-700':
-                            item.estado === 'ATENDIDA'
-
-                        }"
-                      >
-                        {{ obtenerNombreEstado(item.estado) }}
-                      </span>
-
-                </div>
-
-                <!-- FECHA DE CREACIÓN -->
-
-                <p
-                        class="mt-2 text-[11px]
-                             text-gray-500
-                             dark:text-gray-400"
-                >
-                  Recibida:
-                  {{ formatearFecha(item.fechaCreacion) }}
-                </p>
-
-                <!-- NUEVA FECHA DEL RECORDATORIO -->
-
-                @if (
-                item.estado === 'POSPUESTA' &&
-                item.proximoAviso
-                ) {
-
-                <p
-                        class="mt-1 text-[11px]
-                               font-medium text-blue-700
-                               dark:text-blue-400"
-                >
-                  Próximo recordatorio:
-                  {{ formatearFecha(item.proximoAviso) }}
-                </p>
-
-                }
-
-                <!-- CANTIDAD DE POSPOSICIONES -->
-
-                @if (item.vecesPospuesta > 0) {
-
-                <p
-                        class="mt-1 text-[11px]
-                               text-gray-500
-                               dark:text-gray-400"
-                >
-                  Pospuesta
-                  {{ item.vecesPospuesta }}
-                  {{ item.vecesPospuesta === 1 ? 'vez' : 'veces' }}
-                </p>
-
-                }
-
-              </div>
-
+              @if (!item.leida) {
+              <span
+                      class="mt-1 size-2
+                               shrink-0 rounded-full
+                               bg-blue-600"
+                      aria-label="Sin leer"
+              ></span>
+              }
             </div>
 
+            <p
+                    class="mt-1 text-xs leading-5
+                           text-gray-600
+                           dark:text-gray-400"
+            >
+              {{ item.mensaje }}
+            </p>
+
+            <div
+                    class="mt-2 flex flex-wrap
+                           items-center gap-2
+                           text-[11px] text-gray-500"
+            >
+                    <span>
+                      {{
+                        obtenerNombreEstado(
+                          item.estado
+                        )
+                      }}
+                    </span>
+
+              <span>·</span>
+
+              <span>
+                      {{
+                        formatearFecha(
+                          item.fechaCreacion
+                        )
+                      }}
+                    </span>
+            </div>
+
+            @if (
+            item.estado === 'POSPUESTA' &&
+            item.proximoAviso
+            ) {
+
+            <p
+                    class="mt-2 text-xs
+                             text-blue-700
+                             dark:text-blue-400"
+            >
+              Próximo aviso:
+              {{
+              formatearFecha(
+              item.proximoAviso
+              )
+              }}
+            </p>
+            }
+
+            @if (
+            item.tipo === 'RECORDATORIO' &&
+            item.vecesPospuesta > 0
+            ) {
+
+            <p
+                    class="mt-1 text-[11px]
+                             text-gray-500"
+            >
+              Veces pospuesta:
+              {{ item.vecesPospuesta }}
+            </p>
+            }
+
+            <p
+                    class="mt-2 text-xs font-semibold
+                           text-blue-600
+                           dark:text-blue-400"
+            >
+              Ver detalle
+            </p>
+
           </div>
+        </div>
 
-        </li>
-
-        }
-
-      </ul>
+      </button>
 
       }
-
+      }
     </div>
 
-    <!-- ==================================== -->
-    <!-- PIE DEL DESPLEGABLE -->
-    <!-- ==================================== -->
 
+    <!-- ACCIONES DEL HISTORIAL -->
     <div
-            class="mt-3 border-t border-gray-100
-             pt-3 dark:border-gray-800"
+            class="mt-3 flex gap-2
+               border-t border-gray-100 pt-3
+               dark:border-gray-800"
     >
 
       <button
               type="button"
               (click)="cargarNotificaciones()"
-              [disabled]="cargando"
-              class="flex w-full items-center
-               justify-center gap-2
-               rounded-lg border border-gray-300
-               bg-white px-4 py-2.5
-               text-sm font-medium text-gray-700
-               transition-colors hover:bg-gray-50
-               disabled:cursor-not-allowed
-               disabled:opacity-50
-               dark:border-gray-700
-               dark:bg-gray-800
-               dark:text-gray-300
-               dark:hover:bg-gray-700"
+              class="flex-1 rounded-lg border
+                 border-gray-300 px-3 py-2
+                 text-xs text-gray-700
+                 hover:bg-gray-50
+                 dark:border-gray-700
+                 dark:text-gray-300"
       >
+        Actualizar
+      </button>
 
-        <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-        >
-          <path
-                  d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"
-          />
-          <path
-                  d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"
-          />
-        </svg>
-
-        {{ cargando ? 'Actualizando...' : 'Actualizar notificaciones' }}
-
+      <button
+              type="button"
+              (click)="marcarTodasLeidas()"
+              [disabled]="
+            procesando ||
+            totalPendientes === 0
+          "
+              class="flex-1 rounded-lg
+                 bg-blue-600 px-3 py-2
+                 text-xs font-semibold
+                 text-white hover:bg-blue-700
+                 disabled:opacity-50"
+      >
+        Marcar todas leídas
       </button>
 
     </div>
 
-  </app-dropdown>
+  </div>
+
+  }
 
 </div>

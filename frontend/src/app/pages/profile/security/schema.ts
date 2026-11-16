@@ -1,24 +1,34 @@
-import { ChangePasswordErrors, ChangePasswordFormData } from './types';
 
-export function validateChangePassword(data: ChangePasswordFormData): ChangePasswordErrors {
+import {
+  ChangePasswordErrors,
+  ChangePasswordFormData
+} from './types';
+
+export function validateChangePassword(
+    data: ChangePasswordFormData
+): ChangePasswordErrors {
+
   const errors: ChangePasswordErrors = {};
 
-  if (!data.currentPassword || !data.currentPassword.trim()) {
-    errors.currentPassword = 'Current password is required';
+  if (!data.currentPassword?.trim()) {
+    errors.currentPassword =
+        'La contraseña actual es obligatoria.';
   }
 
-  if (!data.newPassword || !data.newPassword.trim()) {
-    errors.newPassword = 'Password must be at least 8 characters';
-  } else if (data.newPassword.trim().length < 8) {
-    errors.newPassword = 'Password must be at least 8 characters';
-  } else if (data.currentPassword && data.currentPassword === data.newPassword) {
-    errors.newPassword = 'New password must be different from current password';
+  if (!data.newPassword || data.newPassword.length < 8) {
+    errors.newPassword =
+        'La nueva contraseña debe tener al menos 8 caracteres.';
+  } else if (data.currentPassword === data.newPassword) {
+    errors.newPassword =
+        'La nueva contraseña debe ser diferente de la actual.';
   }
 
-  if (!data.confirmPassword || !data.confirmPassword.trim()) {
-    errors.confirmPassword = 'Please confirm your new password';
-  } else if (data.newPassword && data.newPassword !== data.confirmPassword) {
-    errors.confirmPassword = 'Passwords do not match';
+  if (!data.confirmPassword) {
+    errors.confirmPassword =
+        'Debes confirmar la nueva contraseña.';
+  } else if (data.newPassword !== data.confirmPassword) {
+    errors.confirmPassword =
+        'Las contraseñas no coinciden.';
   }
 
   return errors;

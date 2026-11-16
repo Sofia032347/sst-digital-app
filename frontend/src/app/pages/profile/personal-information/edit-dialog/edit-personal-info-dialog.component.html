@@ -1,0 +1,119 @@
+@if (isOpen) {
+<div class="fixed inset-0 z-99999 flex items-center justify-center p-4">
+
+    <!-- FONDO OSCURO -->
+    <div
+            class="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
+            (click)="closeModal()"
+    ></div>
+
+    <!-- VENTANA DEL MODAL -->
+    <div
+            class="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-[#1E2635]"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="titulo-editar-perfil"
+            (click)="$event.stopPropagation()"
+    >
+
+        <!-- BOTÓN CERRAR -->
+        <button
+                app-button
+                variant="unstyled"
+                type="button"
+                (click)="closeModal()"
+                [disabled]="guardando"
+                aria-label="Cerrar"
+                class="absolute end-3 top-3 z-10 flex size-9 cursor-pointer items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-800"
+        >
+            <svg
+                    class="size-5"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-hidden="true"
+            >
+                <path
+                        d="M15 5L5 15M5 5L15 15"
+                        stroke="currentColor"
+                        stroke-width="1.75"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                />
+            </svg>
+        </button>
+
+        <!-- CONTENIDO -->
+        <div class="custom-scrollbar max-h-[90vh] overflow-y-auto p-6 sm:p-8">
+
+            <!-- ENCABEZADO -->
+            <div class="flex flex-col gap-1 pe-10 sm:gap-2">
+
+                <h3
+                        id="titulo-editar-perfil"
+                        class="text-xl font-semibold text-gray-800 sm:text-2xl dark:text-white/90"
+                >
+                    Editar información personal
+                </h3>
+
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Consulta tus datos personales y actualiza tu departamento
+                    o área de trabajo.
+                </p>
+
+            </div>
+
+            <!-- FORMULARIO -->
+            <form
+                    (ngSubmit)="onSubmit()"
+                    class="mt-4 flex flex-col gap-6"
+                    novalidate
+            >
+
+                <!-- DATOS DE MYSQL -->
+                <app-personal-details-fields
+                        class="block"
+                        [formData]="formData"
+                        [errors]="errors"
+                        (fieldChange)="clearError($event)"
+                />
+
+                <!-- BOTONES -->
+                <div class="flex flex-col-reverse justify-end gap-3 pt-3 sm:flex-row">
+
+                    <button
+                            app-button
+                            variant="unstyled"
+                            type="button"
+                            (click)="closeModal()"
+                            [disabled]="guardando"
+                            class="shadow-theme-xs flex h-11 cursor-pointer items-center justify-center rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                            app-button
+                            variant="unstyled"
+                            type="submit"
+                            [disabled]="guardando"
+                            class="shadow-theme-xs flex h-11 cursor-pointer items-center justify-center rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        @if (guardando) {
+                        Guardando...
+                        } @else {
+                        Aplicar cambios
+                        }
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+}

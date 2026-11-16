@@ -403,11 +403,11 @@ public class NotificacionService {
                                 MINUTOS_POSPOSICION
                         );
 
+
         n.posponerHasta(proxima);
 
-        // La acción de posponer queda registrada.
-        n.setLeida(true);
-
+// Posponer no significa leer la notificación.
+// Conservamos su estado de lectura anterior.
         Notificacion guardada =
                 repositorio.save(n);
 
@@ -434,9 +434,11 @@ public class NotificacionService {
 
         evento.marcarAtendida();
 
-        // El evento queda en el historial,
-        // sin aumentar el contador sin leer.
-        evento.setLeida(true);
+
+        // El evento de aplazamiento es una notificación nueva.
+        // Debe aparecer como no leída en la campana.
+        evento.setLeida(false);
+
 
         repositorio.save(evento);
 

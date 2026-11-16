@@ -1,0 +1,248 @@
+
+<div class="space-y-6">
+
+    <!-- ENCABEZADO -->
+
+    <div class="flex flex-wrap items-center justify-between gap-4">
+
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+                Gestión de empleados
+            </h1>
+
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Consulta, registro y edición del personal.
+            </p>
+        </div>
+
+        <button
+                type="button"
+                (click)="crearEmpleado()"
+                [disabled]="guardando || eliminandoId !== null"
+                class="inline-flex h-10 items-center justify-center gap-2
+             rounded-lg bg-blue-600 px-4
+             text-sm font-semibold text-white
+             transition hover:bg-blue-700
+             disabled:opacity-50"
+        >
+            <span class="text-lg">+</span>
+            Nuevo empleado
+        </button>
+
+    </div>
+
+    <!-- TABLA DE EMPLEADOS -->
+
+    <section
+            class="rounded-2xl border border-gray-200
+           bg-white p-5 shadow-sm
+           dark:border-gray-800 dark:bg-gray-900"
+    >
+
+        <!-- BUSCADOR Y ACTUALIZAR -->
+
+        <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+
+            <div class="w-full max-w-md">
+
+                <label
+                        for="buscarEmpleado"
+                        class="mb-2 block text-sm font-medium
+                 text-gray-700 dark:text-gray-300"
+                >
+                    Buscar empleado
+                </label>
+
+                <input
+                        id="buscarEmpleado"
+                        type="search"
+                        [value]="busqueda"
+                        (input)="actualizarBusqueda($any($event.target).value)"
+                        placeholder="Nombre, correo, departamento o rol..."
+                        class="h-11 w-full rounded-lg border border-gray-300
+                 bg-white px-4 text-sm text-gray-900
+                 outline-none focus:border-blue-500
+                 dark:border-gray-700 dark:bg-gray-800
+                 dark:text-white"
+                />
+
+            </div>
+
+        </div>
+
+        <!-- ERROR -->
+
+        @if (error) {
+
+        <div
+                role="alert"
+                class="mb-4 rounded-lg border border-red-200
+               bg-red-50 p-3 text-sm text-red-700
+               dark:border-red-800 dark:bg-red-900/20
+               dark:text-red-300"
+        >
+            {{ error }}
+        </div>
+
+        }
+
+        <!-- CARGANDO -->
+
+        @if (cargando) {
+        <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+            Cargando empleados...
+        </p>
+        }
+
+        <!-- TABLA -->
+
+        <div class="overflow-x-auto">
+
+            <table class="w-full min-w-[760px] text-left text-sm">
+
+                <thead
+                        class="border-b border-gray-200 bg-gray-50
+                 dark:border-gray-800 dark:bg-gray-800/50"
+                >
+
+                <tr class="text-gray-600 dark:text-gray-300">
+
+                    <th class="px-4 py-3 font-semibold">
+                        Nombre
+                    </th>
+
+                    <th class="px-4 py-3 font-semibold">
+                        Correo
+                    </th>
+
+                    <th class="px-4 py-3 font-semibold">
+                        Departamento
+                    </th>
+
+                    <th class="px-4 py-3 font-semibold">
+                        Rol
+                    </th>
+
+                    <th class="px-4 py-3 text-right font-semibold">
+                        Acciones
+                    </th>
+
+                </tr>
+
+                </thead>
+
+                <tbody>
+
+                @for (empleado of empleadosFiltrados; track empleado.id) {
+
+                <tr
+                        class="border-b border-gray-100 text-gray-700
+                     dark:border-gray-800 dark:text-gray-300"
+                >
+
+                    <td class="px-4 py-3 font-medium">
+                        {{ empleado.nombre }}
+                    </td>
+
+                    <td class="px-4 py-3">
+                        {{ empleado.email }}
+                    </td>
+
+                    <td class="px-4 py-3">
+                        {{ empleado.departamento }}
+                    </td>
+
+                    <td class="px-4 py-3">
+
+                <span
+                        class="rounded-full px-3 py-1
+                         text-xs font-semibold"
+                        [ngClass]="
+                    empleado.rol === 'RRHH'
+                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+                      : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                  "
+                >
+                  {{ empleado.rol }}
+                </span>
+
+                    </td>
+
+                    <!-- EDITAR Y ELIMINAR -->
+
+                    <td class="px-4 py-3">
+
+                        <div class="flex justify-end gap-2">
+
+                            <button
+                                    type="button"
+                                    (click)="editarEmpleado(empleado)"
+                                    [disabled]="guardando || eliminandoId !== null"
+                                    class="rounded-lg border border-blue-200
+                           px-3 py-2 text-xs font-semibold
+                           text-blue-700 hover:bg-blue-50
+                           disabled:opacity-50
+                           dark:border-blue-800
+                           dark:text-blue-300
+                           dark:hover:bg-blue-900/20"
+                            >
+                                Editar
+                            </button>
+
+                            <button
+                                    type="button"
+                                    (click)="eliminarEmpleado(empleado)"
+                                    [disabled]="guardando || eliminandoId !== null"
+                                    class="rounded-lg border border-red-200
+                           px-3 py-2 text-xs font-semibold
+                           text-red-600 hover:bg-red-50
+                           disabled:opacity-50
+                           dark:border-red-900
+                           dark:text-red-400
+                           dark:hover:bg-red-900/20"
+                            >
+                                {{
+                                eliminandoId === empleado.id
+                                ? 'Eliminando...'
+                                : 'Eliminar'
+                                }}
+                            </button>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+
+
+                } @empty {
+
+                <tr>
+                    <td
+                            colspan="5"
+                            class="px-4 py-10 text-center
+             text-gray-500 dark:text-gray-400"
+                    >
+                        {{
+                        cargando
+                        ? 'Consultando empleados...'
+                        : 'No hay empleados para mostrar.'
+                        }}
+                    </td>
+                </tr>
+
+                }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">
+            Empleados encontrados: {{ empleadosFiltrados.length }}
+        </p>
+
+    </section>
+
+</div>

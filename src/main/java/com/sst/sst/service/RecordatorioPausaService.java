@@ -3,13 +3,10 @@ package com.sst.sst.service;
 import com.sst.sst.model.Actividad;
 import com.sst.sst.model.Notificacion;
 import com.sst.sst.model.Usuario;
-
 import com.sst.sst.repository.ActividadRepository;
 import com.sst.sst.repository.NotificacionRepository;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +17,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
-
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -60,7 +56,8 @@ public class RecordatorioPausaService {
             int faltan,
             LocalDateTime proximaPausa,
             Long notificacionId
-    ) {}
+    ) {
+    }
 
     // ==========================================
     // CALCULAR SEGUNDOS RESTANTES
@@ -326,18 +323,31 @@ public class RecordatorioPausaService {
         // 4. COMPROBAR META DIARIA
         // ======================================
 
-        long completadasHoy =
-                actividadesHoy
-                        .stream()
-                        .filter(a ->
-                                Actividad.ESTADO_COMPLETADA
-                                        .equals(
-                                                a.getEstado()
-                                        )
-                        )
-                        .count();
 
-        if (completadasHoy >= META_DIARIA) {
+        long registradasHoy = actividadesHoy.size();
+
+        if (registradasHoy >= META_DIARIA) {
+
+            // Cerrar los recordatorios activos para evitar
+            // que siga apareciendo el aviso de una quinta pausa.
+            List<Notificacion> recordatoriosActivos =
+                    notificacionesRepository
+                            .findByUsuarioIdAndEstadoInOrderByFechaCreacionDesc(
+                                    usuario.getId(),
+                                    ESTADOS_ACTIVOS
+                            );
+
+            for (Notificacion recordatorio : recordatoriosActivos) {
+
+                if (!Notificacion.TIPO_RECORDATORIO.equals(
+                        recordatorio.getTipo()
+                )) {
+                    continue;
+                }
+
+                recordatorio.marcarAtendida();
+                notificacionesRepository.save(recordatorio);
+            }
 
             return new EstadoPausa(
                     "BLOQUEADO_COMPLETO",

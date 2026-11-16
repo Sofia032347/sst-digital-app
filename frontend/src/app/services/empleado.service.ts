@@ -2,8 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-// Estructura de los datos enviados por Spring Boot.
-export interface ResumenEmpleado {
+export interface ResumenEmpleadoApi {
     nombre: string;
     email: string;
     metaDiaria: number;
@@ -15,6 +14,12 @@ export interface ResumenEmpleado {
     enProcesoHoy: number;
 }
 
+export interface TemporizadorEmpleado {
+    fechaInicioDia: string;
+    proximaPausa: string;
+    duracionSegundos: number;
+}
+
 @Injectable({
     providedIn: 'root'
 })
@@ -22,20 +27,52 @@ export class EmpleadoService {
 
     private readonly http = inject(HttpClient);
 
-    // Usamos una ruta relativa para poder configurar
-    // el proxy de Angular hacia Spring Boot.
     private readonly apiUrl = '/api/empleado';
 
     // ==========================================
-    // CONSULTAR ESTADÍSTICAS DEL EMPLEADO
+    // RESUMEN DEL EMPLEADO
     // ==========================================
 
-    obtenerResumen(): Observable<ResumenEmpleado> {
-        return this.http.get<ResumenEmpleado>(
+    obtenerResumen(): Observable<ResumenEmpleadoApi> {
+
+        return this.http.get<ResumenEmpleadoApi>(
             `${this.apiUrl}/resumen`,
             {
                 withCredentials: true
             }
         );
+
     }
+
+    // ==========================================
+    // CONSULTAR TEMPORIZADOR
+    // ==========================================
+
+    obtenerTemporizador(): Observable<TemporizadorEmpleado> {
+
+        return this.http.get<TemporizadorEmpleado>(
+            `${this.apiUrl}/temporizador`,
+            {
+                withCredentials: true
+            }
+        );
+
+    }
+
+    // ==========================================
+    // REGISTRAR PAUSA COMPLETADA
+    // ==========================================
+
+    registrarPausaCompletada(): Observable<TemporizadorEmpleado> {
+
+        return this.http.post<TemporizadorEmpleado>(
+            `${this.apiUrl}/temporizador/completar`,
+            {},
+            {
+                withCredentials: true
+            }
+        );
+
+    }
+
 }

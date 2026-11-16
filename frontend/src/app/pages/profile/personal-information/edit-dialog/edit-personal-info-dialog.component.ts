@@ -1,203 +1,257 @@
-import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { PersonalInfo } from '../types';
-import { AvatarUploadSectionComponent } from './avatar-upload-section.component';
-import { PersonalDetailsFieldsComponent } from './personal-details-fields.component';
-import { validatePersonalInfo } from './schema';
-import { SocialLinksFieldsComponent } from './social-links-fields.component';
-import { PersonalInfoErrors, PersonalInfoFormData } from './types';
-import { ButtonComponent } from '../../../../shared/components/ui/button/button.component';
+import {CommonModule} from '@angular/common';
+import {Component, EventEmitter, Input, OnChanges, Output, SimpleChanges} from '@angular/core';
+import {FormsModule} from '@angular/forms';
+import {PersonalInfo} from '../types';
+import {PersonalDetailsFieldsComponent} from './personal-details-fields.component';
+import {PersonalInfoErrors, PersonalInfoFormData} from './types';
+import {ButtonComponent} from '../../../../shared/components/ui/button/button.component';
 
 @Component({
-  selector: 'app-edit-personal-info-dialog',
-  imports: [ButtonComponent, 
-    CommonModule,
-    FormsModule,
-    AvatarUploadSectionComponent,
-    PersonalDetailsFieldsComponent,
-    SocialLinksFieldsComponent,
-  ],
-  template: `
-    @if (isOpen) {
-      <div class="fixed inset-0 z-99999 flex items-center justify-center p-4">
-        <!-- Backdrop -->
-        <div
-          class="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
-          (click)="closeModal()"
-        ></div>
+    selector: 'app-edit-personal-info-dialog',
 
-        <!-- Dialog Box -->
-        <div
-          class="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-[#1E2635]"
-          (click)="$event.stopPropagation()"
-        >
-          <!-- Close Button -->
-          <button app-button variant="unstyled"
-            type="button"
-            (click)="closeModal()"
-            aria-label="Close"
-            class="absolute end-3 top-3 z-10 flex size-9 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700 cursor-pointer dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
-          >
-            <svg
-              class="size-5"
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M15 5L5 15M5 5L15 15"
-                stroke="currentColor"
-                stroke-width="1.75"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-            <span class="sr-only">Close</span>
-          </button>
+    standalone: true,
 
-          <div class="max-h-[90vh] overflow-y-auto p-6 sm:p-8 custom-scrollbar">
-            <!-- Header -->
-            <div class="flex flex-col gap-1 pe-10 sm:gap-2">
-              <h3 class="text-xl font-semibold text-gray-800 sm:text-2xl dark:text-white/90">
-                Edit Personal Information
-              </h3>
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                Update your details to keep your profile up-to-date.
-              </p>
-            </div>
+    imports: [
+        ButtonComponent,
+        CommonModule,
+        FormsModule,
+        PersonalDetailsFieldsComponent
+    ],
 
-            <form (ngSubmit)="onSubmit()" class="mt-4 flex flex-col gap-6" noValidate>
-              <app-avatar-upload-section
-                class="block"
-                [previewAvatarUrl]="previewAvatarUrl"
-                [fullName]="initialData.fullName"
-                [fallbackLetter]="initialLetter"
-                (avatarChange)="avatarFileUrl = $event"
-              />
-
-              <app-personal-details-fields
-                class="block"
-                [formData]="formData"
-                [errors]="errors"
-                (fieldChange)="clearError($event)"
-              />
-
-              <app-social-links-fields class="block" [formData]="formData" />
-
-              <!-- Footer Actions -->
-              <div class="flex flex-col-reverse justify-end gap-3 pt-3 sm:flex-row">
-                <button app-button variant="unstyled"
-                  type="button"
-                  (click)="closeModal()"
-                  class="shadow-theme-xs flex h-11 items-center justify-center rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-800 cursor-pointer dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/3 dark:hover:text-gray-200"
-                >
-                  Close
-                </button>
-                <button app-button variant="unstyled"
-                  type="submit"
-                  class="shadow-theme-xs flex h-11 items-center justify-center rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600 cursor-pointer dark:bg-brand-500 dark:hover:bg-brand-600"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    }
-  `
+    // HTML separado del TypeScript.
+    templateUrl: './edit-personal-info-dialog.component.html'
 })
-export class EditPersonalInfoDialogComponent implements OnChanges {
-  @Input() isOpen = false;
-  @Input() initialData!: PersonalInfo;
-  @Output() openChange = new EventEmitter<boolean>();
-  @Output() save = new EventEmitter<PersonalInfo>();
+export class EditPersonalInfoDialogComponent
+    implements OnChanges {
 
-  avatarFileUrl: string | null = null;
-  formData: PersonalInfoFormData = {
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    bio: '',
-    facebook: '',
-    x: '',
-    linkedin: '',
-    instagram: '',
-    avatarUrl: '',
-  };
-  errors: PersonalInfoErrors = {};
+    // ==========================================
+    // DATOS RECIBIDOS DEL COMPONENTE PADRE
+    // ==========================================
 
-  get previewAvatarUrl(): string {
-    return this.avatarFileUrl || this.formData.avatarUrl || this.initialData?.avatarUrl || '/images/user/user-01.jpg';
-  }
+    @Input() isOpen = false;
 
-  get initialLetter(): string {
-    const name = this.formData.firstName?.trim() || this.initialData?.firstName?.trim() || 'M';
-    return name[0].toUpperCase();
-  }
+    @Input() initialData!: PersonalInfo;
+    @Input() guardando = false;
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['isOpen']?.currentValue || changes['initialData']?.currentValue) {
-      if (this.initialData) {
-        this.avatarFileUrl = null;
-        this.errors = {};
-        this.formData = {
-          firstName: this.initialData.firstName || '',
-          lastName: this.initialData.lastName || '',
-          email: this.initialData.email || '',
-          phone: this.initialData.phone || '',
-          bio: this.initialData.bio || '',
-          facebook: this.initialData.socialLinks?.facebook || '',
-          x: this.initialData.socialLinks?.x || '',
-          linkedin: this.initialData.socialLinks?.linkedin || '',
-          instagram: this.initialData.socialLinks?.instagram || '',
-          avatarUrl: this.initialData.avatarUrl || '',
-        };
-      }
-    }
-  }
+    // ==========================================
+    // EVENTOS
+    // ==========================================
 
-  clearError(field: keyof PersonalInfoFormData) {
-    if (this.errors[field]) {
-      delete this.errors[field];
-    }
-  }
+    @Output() openChange =
+        new EventEmitter<boolean>();
 
-  closeModal() {
-    this.avatarFileUrl = null;
-    this.openChange.emit(false);
-  }
+    @Output() save =
+        new EventEmitter<PersonalInfo>();
 
-  onSubmit() {
-    this.errors = validatePersonalInfo(this.formData);
-    if (Object.keys(this.errors).length > 0) {
-      return;
-    }
+    // Archivo real de la fotografía.
+    @Output() avatarFileSave =
+        new EventEmitter<File>();
 
-    const updatedFullName = `${this.formData.firstName.trim()} ${this.formData.lastName.trim()}`.trim();
-    const updated: PersonalInfo = {
-      ...this.initialData,
-      avatarUrl: this.previewAvatarUrl,
-      fullName: updatedFullName || this.initialData.fullName,
-      firstName: this.formData.firstName.trim(),
-      lastName: this.formData.lastName.trim(),
-      email: this.formData.email.trim(),
-      phone: this.formData.phone.trim(),
-      bio: this.formData.bio?.trim() ?? '',
-      socialLinks: {
-        facebook: this.formData.facebook?.trim() ?? '',
-        x: this.formData.x?.trim() ?? '',
-        linkedin: this.formData.linkedin?.trim() ?? '',
-        instagram: this.formData.instagram?.trim() ?? '',
-      },
+    // ==========================================
+    // FOTOGRAFÍA
+    // ==========================================
+
+    avatarFileUrl: string | null = null;
+
+    archivoAvatar: File | null = null;
+
+    // ==========================================
+    // FORMULARIO
+    // ==========================================
+
+    formData: PersonalInfoFormData = {
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        bio: '',
+        facebook: '',
+        x: '',
+        linkedin: '',
+        instagram: '',
+        avatarUrl: ''
     };
 
-    this.save.emit(updated);
-    this.closeModal();
-  }
+    errors: PersonalInfoErrors = {};
+
+    // ==========================================
+    // VISTA PREVIA DE LA FOTO
+    // ==========================================
+
+    get previewAvatarUrl(): string {
+
+        return (
+            this.avatarFileUrl ||
+            this.formData.avatarUrl ||
+            this.initialData?.avatarUrl ||
+            ''
+        );
+    }
+
+    // ==========================================
+    // INICIAL DEL NOMBRE
+    // ==========================================
+
+    get initialLetter(): string {
+
+        const nombre =
+            this.formData.firstName?.trim() ||
+            this.initialData?.firstName?.trim() ||
+            this.initialData?.fullName?.trim() ||
+            'E';
+
+        return nombre.charAt(0).toUpperCase();
+    }
+
+    // ==========================================
+    // ACTUALIZAR VISTA PREVIA
+    // ==========================================
+
+    cambiarVistaPrevia(url: string): void {
+
+        this.avatarFileUrl = url;
+    }
+
+    // ==========================================
+    // RECIBIR ARCHIVO DE FOTO O CÁMARA
+    // ==========================================
+
+    recibirArchivo(archivo: File): void {
+
+        this.archivoAvatar = archivo;
+    }
+
+    // ==========================================
+    // INICIALIZAR DATOS AL ABRIR
+    // ==========================================
+
+    ngOnChanges(changes: SimpleChanges): void {
+
+        if (
+            !changes['isOpen']?.currentValue &&
+            !changes['initialData']?.currentValue
+        ) {
+            return;
+        }
+
+        if (!this.initialData) {
+            return;
+        }
+
+        this.avatarFileUrl = null;
+        this.archivoAvatar = null;
+
+        this.errors = {};
+
+        this.formData = {
+            firstName:
+                this.initialData.fullName || '',
+
+            lastName:
+                this.initialData.lastName || '',
+
+            email:
+                this.initialData.email || '',
+
+            phone:
+                this.initialData.phone || '',
+
+            // Se conservan en la estructura de datos
+            // original para evitar incompatibilidades.
+            // No se dibujan las redes sociales aquí.
+
+            bio:
+                this.initialData.bio || '',
+
+            facebook:
+                this.initialData.socialLinks?.facebook || '',
+
+            x:
+                this.initialData.socialLinks?.x || '',
+
+            linkedin:
+                this.initialData.socialLinks?.linkedin || '',
+
+            instagram:
+                this.initialData.socialLinks?.instagram || '',
+
+            avatarUrl:
+                this.initialData.avatarUrl || ''
+        };
+    }
+
+    // ==========================================
+    // LIMPIAR ERRORES DE CAMPOS
+    // ==========================================
+
+    clearError(
+        campo: keyof PersonalInfoFormData
+    ): void {
+
+        if (this.errors[campo]) {
+            delete this.errors[campo];
+        }
+    }
+
+    // ==========================================
+    // CERRAR MODAL
+    // ==========================================
+    closeModal(): void {
+
+        if (this.guardando) {
+            return;
+        }
+
+        this.avatarFileUrl = null;
+        this.archivoAvatar = null;
+
+        this.openChange.emit(false);
+    }
+
+
+    // ==========================================
+    // VALIDAR Y APLICAR CAMBIOS
+    // ==========================================
+
+
+    onSubmit(): void {
+
+        if (this.guardando || !this.initialData) {
+            return;
+        }
+
+        this.errors = {};
+
+        const departamento = (this.formData.bio ?? '').trim();
+
+        if (!departamento) {
+            this.errors.bio = 'Ingresa tu departamento o área de trabajo.';
+            return;
+        }
+
+        if (departamento.length > 100) {
+            this.errors.bio = 'Máximo 100 caracteres.';
+            return;
+        }
+
+        // En la entidad Usuario, el campo se llama
+        // "departamento". En el formulario actual
+        // se representa mediante "bio".
+        const actualizado: PersonalInfo = {
+            ...this.initialData,
+            bio: departamento
+        };
+
+        // El componente padre realizará el PUT a Spring Boot.
+        this.save.emit(actualizado);
+
+        // NO cerrar aquí.
+        // El padre cerrará el modal cuando MySQL
+        // confirme que se guardaron los cambios.
+    }
 }
-export { EditPersonalInfoDialogComponent as EditPersonalInfoDialog };
+
+export {
+    EditPersonalInfoDialogComponent as
+        EditPersonalInfoDialog
+};

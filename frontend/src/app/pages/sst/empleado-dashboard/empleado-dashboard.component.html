@@ -1,351 +1,722 @@
-
-<section class="space-y-6">
+<section class="space-y-4">
 
     <!-- ====================================== -->
-    <!-- ENCABEZADO DEL DASHBOARD -->
+    <!-- ENCABEZADO -->
     <!-- ====================================== -->
 
     <div
-            class="flex flex-col gap-4 sm:flex-row
-           sm:items-center sm:justify-between"
+            class="flex flex-col gap-3
+           sm:flex-row sm:items-center
+           sm:justify-between"
     >
 
         <div>
             <h1
-                    class="text-2xl font-bold text-gray-900
-               dark:text-white"
+                    class="text-xl font-bold
+               text-gray-900 dark:text-white"
             >
-                Panel del empleado
+                Inicio
             </h1>
 
-            <p class="mt-1 text-gray-500 dark:text-gray-400">
+            <p
+                    class="mt-1 text-sm text-gray-500
+               dark:text-gray-400"
+            >
                 Bienvenido a SST Digital
+
                 @if (nombreEmpleado) {
                 <span class="font-semibold">
             , {{ nombreEmpleado }}
           </span>
                 }
             </p>
-
-            <p class="mt-1 text-sm text-gray-400">
-                Seguimiento de tus pausas activas de hoy
-            </p>
-        </div>
-
-        <button
-                type="button"
-                (click)="cargarResumen()"
-                [disabled]="cargando"
-                class="rounded-xl bg-blue-600 px-4 py-2
-             text-sm font-medium text-white
-             transition hover:bg-blue-700
-             disabled:cursor-not-allowed
-             disabled:opacity-50"
-        >
-            {{ cargando ? 'Actualizando...' : 'Actualizar datos' }}
-        </button>
-
-    </div>
-
-    <!-- ====================================== -->
-    <!-- ESTADO DE CARGA -->
-    <!-- ====================================== -->
-
-    @if (cargando) {
-
-    <div
-            class="rounded-2xl border border-gray-200
-             bg-white p-8 text-center
-             dark:border-gray-800 dark:bg-gray-900"
-    >
-        <div
-                class="mx-auto h-9 w-9 animate-spin
-               rounded-full border-4
-               border-gray-200 border-t-blue-600"
-        ></div>
-
-        <p class="mt-4 text-gray-500 dark:text-gray-400">
-            Consultando tus estadísticas...
-        </p>
-    </div>
-
-    } @else if (errorCarga) {
-
-    <!-- ====================================== -->
-    <!-- ERROR DE CONEXIÓN -->
-    <!-- ====================================== -->
-
-    <div
-            class="rounded-2xl border border-red-200
-             bg-red-50 p-6 dark:border-red-900
-             dark:bg-red-950/30"
-    >
-        <h2 class="font-semibold text-red-700 dark:text-red-400">
-            No se pudieron cargar las estadísticas
-        </h2>
-
-        <p class="mt-2 text-sm text-red-600 dark:text-red-300">
-            Comprueba que Spring Boot esté funcionando y que
-            tu sesión siga activa.
-        </p>
-
-        <button
-                type="button"
-                (click)="cargarResumen()"
-                class="mt-4 rounded-xl bg-red-600 px-4 py-2
-               text-sm font-medium text-white
-               hover:bg-red-700"
-        >
-            Reintentar
-        </button>
-    </div>
-
-    } @else {
-
-    <!-- ====================================== -->
-    <!-- TARJETAS DE ESTADÍSTICAS -->
-    <!-- ====================================== -->
-
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-
-        <!-- META DIARIA -->
-
-        <div
-                class="rounded-2xl border border-gray-200
-               bg-white p-6 shadow-sm
-               dark:border-gray-800 dark:bg-gray-900"
-        >
-            <div class="mb-4 flex items-center justify-between">
-          <span
-                  class="rounded-xl bg-blue-50 px-3 py-2
-                   text-sm font-semibold text-blue-600
-                   dark:bg-blue-900/30 dark:text-blue-400"
-          >
-            Meta
-          </span>
-            </div>
-
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-                Objetivo diario
-            </p>
-
-            <h2 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
-                {{ resumen.objetivoDiario }}
-            </h2>
-
-            <p class="mt-2 text-xs text-gray-400">
-                Pausas activas programadas
-            </p>
-        </div>
-
-        <!-- PAUSAS COMPLETADAS -->
-
-        <div
-                class="rounded-2xl border border-gray-200
-               bg-white p-6 shadow-sm
-               dark:border-gray-800 dark:bg-gray-900"
-        >
-            <div class="mb-4">
-          <span
-                  class="rounded-xl bg-green-50 px-3 py-2
-                   text-sm font-semibold text-green-600
-                   dark:bg-green-900/30 dark:text-green-400"
-          >
-            Completadas
-          </span>
-            </div>
-
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-                Pausas completadas hoy
-            </p>
-
-            <h2 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
-                {{ resumen.pausasCompletadas }}
-            </h2>
-
-            <p class="mt-2 text-xs text-gray-400">
-                Registradas en el sistema
-            </p>
-        </div>
-
-        <!-- PAUSAS PENDIENTES -->
-
-        <div
-                class="rounded-2xl border border-gray-200
-               bg-white p-6 shadow-sm
-               dark:border-gray-800 dark:bg-gray-900"
-        >
-            <div class="mb-4">
-          <span
-                  class="rounded-xl bg-amber-50 px-3 py-2
-                   text-sm font-semibold text-amber-600
-                   dark:bg-amber-900/30 dark:text-amber-400"
-          >
-            Pendientes
-          </span>
-            </div>
-
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-                Pausas restantes
-            </p>
-
-            <h2 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
-                {{ pausasPendientes }}
-            </h2>
-
-            <p class="mt-2 text-xs text-gray-400">
-                Para alcanzar la meta diaria
-            </p>
-        </div>
-
-        <!-- PORCENTAJE DE CUMPLIMIENTO -->
-
-        <div
-                class="rounded-2xl border border-gray-200
-               bg-white p-6 shadow-sm
-               dark:border-gray-800 dark:bg-gray-900"
-        >
-            <div class="mb-4">
-          <span
-                  class="rounded-xl bg-purple-50 px-3 py-2
-                   text-sm font-semibold text-purple-600
-                   dark:bg-purple-900/30 dark:text-purple-400"
-          >
-            Cumplimiento
-          </span>
-            </div>
-
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-                Progreso diario
-            </p>
-
-            <h2 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
-                {{ porcentajeCumplimiento }}%
-            </h2>
-
-            <p class="mt-2 text-xs text-gray-400">
-                Respecto al objetivo diario
-            </p>
         </div>
 
     </div>
 
+
     <!-- ====================================== -->
-    <!-- BARRA DE PROGRESO -->
+    <!-- DOS SEMICÍRCULOS -->
     <!-- ====================================== -->
 
-    <div
-            class="rounded-2xl border border-gray-200
-             bg-white p-6 shadow-sm
-             dark:border-gray-800 dark:bg-gray-900"
-    >
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 
-        <div
-                class="flex flex-col gap-2 sm:flex-row
-               sm:items-center sm:justify-between"
+        <!-- ================================== -->
+        <!-- PRÓXIMA PAUSA ACTIVA -->
+        <!-- ================================== -->
+
+        <article
+                class="rounded-2xl border border-gray-200
+             bg-white p-4 shadow-sm sm:p-5
+             dark:border-gray-800
+             dark:bg-gray-900"
         >
-            <div>
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-                    Tu progreso de hoy
-                </h2>
 
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    {{ resumen.pausasCompletadas }}
-                    de
-                    {{ resumen.objetivoDiario }}
-                    pausas activas completadas
+            <div
+                    class="flex items-start
+               justify-between gap-2"
+            >
+
+                <div>
+                    <h2
+                            class="text-base font-semibold
+                   text-gray-900
+                   dark:text-white"
+                    >
+                        Próxima pausa activa
+                    </h2>
+
+                    <p class="mt-1 text-xs text-gray-500">
+                        Temporizador de descanso
+                    </p>
+                </div>
+
+                <span
+                        class="shrink-0 rounded-full
+                 bg-blue-50 px-2.5 py-1
+                 text-[11px] font-semibold
+                 text-blue-700
+                 dark:bg-blue-900/30
+                 dark:text-blue-300"
+                >
+          Demo: 5 min
+        </span>
+
+            </div>
+
+
+            <!-- SEMICÍRCULO DEL TEMPORIZADOR -->
+            <div
+                    class="mx-auto mt-3
+               w-full max-w-[235px]"
+            >
+
+                <svg
+                        viewBox="0 0 300 165"
+                        class="block h-auto w-full
+                 text-gray-900
+                 dark:text-white"
+                        role="img"
+                        [attr.aria-label]="
+            'Tiempo restante ' +
+            tiempoFormateado
+          "
+                >
+
+                    <defs>
+                        <linearGradient
+                                id="gradiente-temporizador"
+                                x1="0%"
+                                y1="0%"
+                                x2="100%"
+                                y2="0%"
+                        >
+                            <stop
+                                    offset="0%"
+                                    stop-color="#465FFF"
+                            />
+
+                            <stop
+                                    offset="100%"
+                                    stop-color="#60A5FA"
+                            />
+                        </linearGradient>
+                    </defs>
+
+                    <!-- ARCO DE FONDO -->
+                    <path
+                            d="M30 145 A120 120 0 0 1 270 145"
+                            fill="none"
+                            stroke-width="13"
+                            stroke-linecap="round"
+                            class="stroke-gray-200
+                   dark:stroke-gray-700"
+                    />
+
+                    <!-- ARCO DE PROGRESO -->
+                    <path
+                            d="M30 145 A120 120 0 0 1 270 145"
+                            fill="none"
+                            stroke="url(#gradiente-temporizador)"
+                            stroke-width="13"
+                            stroke-linecap="round"
+                            pathLength="100"
+                            stroke-dasharray="100"
+                            [attr.stroke-dashoffset]="
+              100 - porcentajeTemporizador
+            "
+                            class="transition-all duration-700"
+                    />
+
+                    <!-- TIEMPO -->
+                    <text
+                            x="150"
+                            y="108"
+                            text-anchor="middle"
+                            font-size="36"
+                            font-weight="700"
+                            fill="currentColor"
+                            style="font-variant-numeric: tabular-nums"
+                    >
+                        {{ tiempoFormateado }}
+                    </text>
+
+                    <text
+                            x="150"
+                            y="131"
+                            text-anchor="middle"
+                            font-size="12"
+                            fill="#98A2B3"
+                    >
+                        Tiempo restante
+                    </text>
+
+                </svg>
+
+            </div>
+
+
+            <!-- PORCENTAJE -->
+            <div class="text-center">
+
+                <p
+                        class="text-lg font-bold
+                 text-blue-600
+                 dark:text-blue-400"
+                >
+                    {{
+                    porcentajeTemporizador
+                    | number:'1.0-0'
+                    }}%
+                </p>
+
+                <p
+                        class="text-[11px] text-gray-500"
+                >
+                    Tiempo transcurrido del intervalo
+                </p>
+
+            </div>
+
+
+            <!-- ESTADO -->
+            <div
+                    class="mt-3 rounded-lg
+               bg-gray-50 px-3 py-2.5
+               text-center dark:bg-gray-800"
+                    aria-live="polite"
+            >
+
+                @switch (estadoTemporizador) {
+
+                @case ('CARGANDO') {
+                <p class="text-xs text-gray-500">
+                    Sincronizando temporizador...
+                </p>
+                }
+
+                @case ('ESPERANDO') {
+                <p class="text-xs text-gray-500">
+                    Cuenta regresiva para tu próxima pausa
+                </p>
+                }
+
+                @case ('POSPUESTA') {
+                <p
+                        class="text-xs font-semibold
+                     text-blue-600"
+                >
+                    Recordatorio pospuesto.
+                    Puedes iniciar tu pausa cuando lo desees.
+                </p>
+                }
+
+                @case ('DISPONIBLE') {
+                <p
+                        class="text-xs font-semibold
+                     text-orange-600"
+                >
+                    Es momento de realizar tu pausa activa.
+                </p>
+                }
+
+                @case ('BLOQUEADO_COMPLETO') {
+                <p
+                        class="text-xs font-semibold
+                     text-green-600"
+                >
+                    Límite diario de 4 actividades alcanzado
+                </p>
+                }
+
+                @case ('EN_PROCESO') {
+                <p class="text-xs text-blue-600">
+                    Hay una pausa activa en curso
+                </p>
+                }
+
+                @case ('REANUDAR') {
+                <p class="text-xs text-amber-600">
+                    Tienes una pausa pendiente de reanudar
+                </p>
+                }
+
+                @case ('ATENDIDA') {
+                <p class="text-xs text-green-600">
+                    Recordatorio atendido
+                </p>
+                }
+
+                @default {
+                <p class="text-xs text-gray-500">
+                    Consultando el estado de tu pausa
+                </p>
+                }
+
+                }
+
+            </div>
+
+
+            <!-- BOTONES DE PAUSAS ACTIVAS -->
+            @if (puedeIniciarAhora || (!cargando && !errorCarga && pausasIncompletas > 0)) {
+
+            <div class="mt-3 flex flex-wrap items-center justify-center gap-3">
+
+                <!-- INICIAR PAUSA NUEVA -->
+                @if (puedeIniciarAhora) {
+                <button
+                        type="button"
+                        (click)="iniciarPausaAhora()"
+                        class="inline-flex items-center justify-center
+                       rounded-lg bg-blue-600 px-5 py-2.5
+                       text-xs font-semibold text-white
+                       transition hover:bg-blue-700">
+
+                    Iniciar pausa activa ahora
+
+                </button>
+                }
+
+                <!-- CONTINUAR PAUSA INCOMPLETA -->
+                @if (!cargando && !errorCarga && pausasIncompletas > 0) {
+                <button
+                        type="button"
+                        (click)="continuarPausaIncompleta()"
+                        class="inline-flex items-center justify-center
+                       rounded-lg bg-amber-500 px-5 py-2.5
+                       text-xs font-semibold text-white
+                       transition hover:bg-amber-600">
+
+                    Continuar pausa incompleta
+                    ({{ pausasIncompletas }})
+
+                </button>
+                }
+
+            </div>
+
+            }
+
+        </article>
+
+
+        <!-- ================================== -->
+        <!-- PROGRESO DIARIO -->
+        <!-- ================================== -->
+
+        <article
+                class="rounded-2xl border
+             border-gray-200 bg-white
+             p-4 shadow-sm sm:p-5
+             dark:border-gray-800
+             dark:bg-gray-900"
+        >
+
+            <div
+                    class="flex items-start
+               justify-between gap-2"
+            >
+
+                <div>
+                    <h2
+                            class="text-base font-semibold
+                   text-gray-900 dark:text-white"
+                    >
+                        Progreso diario
+                    </h2>
+
+                    <p class="mt-1 text-xs text-gray-500">
+                        Cumplimiento de pausas activas
+                    </p>
+                </div>
+
+                <span
+                        class="rounded-full bg-blue-50
+                 px-2.5 py-1 text-[11px]
+                 font-semibold text-blue-700
+                 dark:bg-blue-900/30
+                 dark:text-blue-300"
+                >
+          Meta: {{ resumen.objetivoDiario }}
+        </span>
+
+            </div>
+
+
+            @if (cargando) {
+
+            <div class="py-16 text-center">
+                <p class="text-xs text-gray-500">
+                    Consultando tus estadísticas...
                 </p>
             </div>
 
-            <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-          {{ porcentajeCumplimiento }}%
-        </span>
-        </div>
+            } @else if (errorCarga) {
 
-        <div
-                class="mt-5 h-4 overflow-hidden rounded-full
-               bg-gray-200 dark:bg-gray-700"
-                role="progressbar"
-                [attr.aria-valuenow]="porcentajeCumplimiento"
-                aria-valuemin="0"
-                aria-valuemax="100"
-                aria-label="Cumplimiento diario"
-        >
             <div
-                    class="h-full rounded-full bg-blue-600
-                 transition-all duration-500"
-                    [style.width.%]="porcentajeCumplimiento"
-            ></div>
-        </div>
+                    class="mt-4 rounded-lg
+                 bg-red-50 p-4 text-center"
+            >
+                <p class="text-xs text-red-700">
+                    No se pudieron cargar las estadísticas.
+                </p>
 
-        @if (porcentajeCumplimiento >= 100) {
+                <button
+                        type="button"
+                        (click)="cargarResumen()"
+                        class="mt-3 rounded-lg
+                   bg-red-600 px-3 py-2
+                   text-xs text-white"
+                >
+                    Reintentar
+                </button>
+            </div>
 
-        <p class="mt-4 text-sm font-medium text-green-600">
-            ¡Felicitaciones! Has alcanzado tu meta diaria.
+            } @else {
+
+            <!-- SEMICÍRCULO DEL PROGRESO -->
+            <div
+                    class="mx-auto mt-3
+                 w-full max-w-[235px]"
+            >
+
+                <svg
+                        viewBox="0 0 300 165"
+                        class="block h-auto w-full
+                   text-gray-900
+                   dark:text-white"
+                        role="img"
+                        [attr.aria-label]="
+              'Cumplimiento diario ' +
+              porcentajeCumplimiento + '%'
+            "
+                >
+
+                    <defs>
+                        <linearGradient
+                                id="gradiente-progreso"
+                                x1="0%"
+                                y1="0%"
+                                x2="100%"
+                                y2="0%"
+                        >
+                            <stop
+                                    offset="0%"
+                                    stop-color="#465FFF"
+                            />
+
+                            <stop
+                                    offset="100%"
+                                    stop-color="#60A5FA"
+                            />
+                        </linearGradient>
+                    </defs>
+
+                    <!-- FONDO -->
+                    <path
+                            d="M30 145 A120 120 0 0 1 270 145"
+                            fill="none"
+                            stroke-width="13"
+                            stroke-linecap="round"
+                            class="stroke-gray-200
+                     dark:stroke-gray-700"
+                    />
+
+                    <!-- AVANCE -->
+                    <path
+                            d="M30 145 A120 120 0 0 1 270 145"
+                            fill="none"
+                            stroke="url(#gradiente-progreso)"
+                            stroke-width="13"
+                            stroke-linecap="round"
+                            pathLength="100"
+                            stroke-dasharray="100"
+                            [attr.stroke-dashoffset]="
+                100 - porcentajeCumplimiento
+              "
+                            class="transition-all duration-700"
+                    />
+
+                    <!-- VALOR -->
+                    <text
+                            x="150"
+                            y="108"
+                            text-anchor="middle"
+                            font-size="36"
+                            font-weight="700"
+                            fill="currentColor"
+                    >
+                        {{ porcentajeCumplimiento }}%
+                    </text>
+
+                    <text
+                            x="150"
+                            y="131"
+                            text-anchor="middle"
+                            font-size="12"
+                            fill="#98A2B3"
+                    >
+                        Objetivo completado
+                    </text>
+
+                </svg>
+
+            </div>
+
+
+            <div class="text-center">
+
+                <p
+                        class="text-sm font-semibold
+                   text-gray-900
+                   dark:text-white"
+                >
+                    {{ resumen.pausasCompletadas }}
+                    de
+                    {{ resumen.objetivoDiario }}
+                    pausas completadas
+                </p>
+
+                <p
+                        class="mt-2 text-xs text-gray-500"
+                >
+                    @if (porcentajeCumplimiento >= 100) {
+                    Objetivo diario alcanzado
+                    } @else {
+                    Faltan {{ pausasPendientes }}
+                    pausas para alcanzar tu objetivo
+                    }
+                </p>
+
+            </div>
+
+
+            <div
+                    class="mt-3 rounded-lg
+                 bg-blue-50 px-3 py-2.5
+                 text-center
+                 dark:bg-blue-900/20"
+            >
+
+                @if (porcentajeCumplimiento >= 100) {
+
+                <p
+                        class="text-xs font-semibold
+                     text-green-700"
+                >
+                    Excelente trabajo.
+                    Objetivo completado.
+                </p>
+
+                } @else if (porcentajeCumplimiento >= 50) {
+
+                <p
+                        class="text-xs font-semibold
+                     text-blue-700"
+                >
+                    Vas muy bien.
+                    Continúa con tus pausas.
+                </p>
+
+                } @else {
+
+                <p
+                        class="text-xs font-semibold
+                     text-blue-700"
+                >
+                    Cada pausa contribuye
+                    a tu bienestar.
+                </p>
+
+                }
+
+            </div>
+
+            }
+
+        </article>
+
+    </div>
+
+
+    <!-- ====================================== -->
+    <!-- ESTADO DE ACTIVIDADES -->
+    <!-- ====================================== -->
+
+    <article
+            class="rounded-2xl border
+           border-gray-200 bg-white
+           p-4 shadow-sm sm:p-5
+           dark:border-gray-800
+           dark:bg-gray-900"
+    >
+
+        <h2
+                class="text-base font-semibold
+             text-gray-900 dark:text-white"
+        >
+            Estado de tus actividades
+        </h2>
+
+        <p class="mt-1 text-xs text-gray-500">
+            Pausas activas registradas durante el día
+        </p>
+
+
+        @if (cargando) {
+
+        <p class="mt-4 text-xs text-gray-500">
+            Consultando actividades...
+        </p>
+
+        } @else if (errorCarga) {
+
+        <p class="mt-4 text-xs text-red-600">
+            No se pudieron cargar los registros.
         </p>
 
         } @else {
 
-        <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">
-            Te faltan {{ pausasPendientes }}
-            pausas activas para alcanzar tu objetivo.
-        </p>
+        <div
+                class="mt-4 grid grid-cols-1
+               gap-3 sm:grid-cols-3"
+        >
 
-        }
+            <!-- COMPLETADAS -->
+            <div
+                    class="rounded-xl border
+                 border-green-100 bg-green-50
+                 p-4 dark:border-green-900
+                 dark:bg-green-900/20"
+            >
 
-    </div>
+                <div class="flex items-center gap-2">
+            <span
+                    class="h-2.5 w-2.5 rounded-full
+                     bg-green-600"
+                    aria-hidden="true"
+            ></span>
 
-    <!-- ====================================== -->
-    <!-- OTROS ESTADOS DE LAS ACTIVIDADES -->
-    <!-- ====================================== -->
+                    <p
+                            class="text-xs font-semibold
+                     text-green-700"
+                    >
+                        Completadas
+                    </p>
+                </div>
 
-    <div
-            class="rounded-2xl border border-gray-200
-             bg-white p-6 shadow-sm
-             dark:border-gray-800 dark:bg-gray-900"
-    >
-
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-            Estado de tus actividades
-        </h2>
-
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Resumen de los registros del día
-        </p>
-
-        <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-
-            <div class="rounded-xl bg-amber-50 p-4 dark:bg-amber-900/20">
-                <p class="text-sm text-amber-700 dark:text-amber-400">
-                    Incompletas
+                <p
+                        class="mt-3 text-2xl font-bold
+                   text-gray-900 dark:text-white"
+                >
+                    {{ resumen.pausasCompletadas }}
                 </p>
-                <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
+
+                <p class="mt-1 text-[11px] text-gray-500">
+                    Finalizadas correctamente
+                </p>
+
+            </div>
+
+
+            <!-- INCOMPLETAS -->
+            <div
+                    class="rounded-xl border
+                 border-amber-100 bg-amber-50
+                 p-4 dark:border-amber-900
+                 dark:bg-amber-900/20"
+            >
+
+                <div class="flex items-center gap-2">
+            <span
+                    class="h-2.5 w-2.5 rounded-full
+                     bg-amber-500"
+                    aria-hidden="true"
+            ></span>
+
+                    <p
+                            class="text-xs font-semibold
+                     text-amber-700"
+                    >
+                        Incompletas
+                    </p>
+                </div>
+
+                <p
+                        class="mt-3 text-2xl font-bold
+                   text-gray-900 dark:text-white"
+                >
                     {{ pausasIncompletas }}
                 </p>
+
+                <p class="mt-1 text-[11px] text-gray-500">
+                    Rutinas sin finalizar
+                </p>
+
             </div>
 
-            <div class="rounded-xl bg-red-50 p-4 dark:bg-red-900/20">
-                <p class="text-sm text-red-700 dark:text-red-400">
-                    Canceladas
-                </p>
-                <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
+
+            <!-- CANCELADAS -->
+            <div
+                    class="rounded-xl border
+                 border-red-100 bg-red-50
+                 p-4 dark:border-red-900
+                 dark:bg-red-900/20"
+            >
+
+                <div class="flex items-center gap-2">
+            <span
+                    class="h-2.5 w-2.5 rounded-full
+                     bg-red-600"
+                    aria-hidden="true"
+            ></span>
+
+                    <p
+                            class="text-xs font-semibold
+                     text-red-700"
+                    >
+                        Canceladas
+                    </p>
+                </div>
+
+                <p
+                        class="mt-3 text-2xl font-bold
+                   text-gray-900 dark:text-white"
+                >
                     {{ pausasCanceladas }}
                 </p>
-            </div>
 
-            <div class="rounded-xl bg-blue-50 p-4 dark:bg-blue-900/20">
-                <p class="text-sm text-blue-700 dark:text-blue-400">
-                    En proceso
+                <p class="mt-1 text-[11px] text-gray-500">
+                    Rutinas canceladas
                 </p>
-                <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
-                    {{ pausasEnProceso }}
-                </p>
+
             </div>
 
         </div>
 
-    </div>
+        }
 
-    }
+    </article>
 
 </section>

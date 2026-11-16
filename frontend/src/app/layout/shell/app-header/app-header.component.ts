@@ -1,59 +1,90 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, ViewChild } from '@angular/core';
-import { RouterModule } from '@angular/router';
-import { ThemeToggleButtonComponent } from '../../../shared/components/common/theme-toggle/theme-toggle-button.component';
-import { NotificationDropdownComponent } from '../../header/notification-dropdown/notification-dropdown.component';
-import { UserDropdownComponent } from '../../header/user-dropdown/user-dropdown.component';
-import { SidebarService } from '../../../core/services/sidebar.service';
 
-import { ButtonComponent } from '../../../shared/components/ui/button/button.component';
-import { InputDirective } from '../../../shared/components/ui/input/input.directive';
+import { Component } from '@angular/core';
+
+import { RouterModule } from '@angular/router';
+
+import { ThemeToggleButtonComponent } from
+      '../../../shared/components/common/theme-toggle/theme-toggle-button.component';
+
+import { NotificationDropdownComponent } from
+      '../../header/notification-dropdown/notification-dropdown.component';
+
+import { UserDropdownComponent } from
+      '../../header/user-dropdown/user-dropdown.component';
+
+import { SidebarService } from
+      '../../../core/services/sidebar.service';
+
+import { ButtonComponent } from
+      '../../../shared/components/ui/button/button.component';
 
 @Component({
   selector: 'app-header',
-  imports: [InputDirective, ButtonComponent, 
+  standalone: true,
+
+  imports: [
     CommonModule,
     RouterModule,
+    ButtonComponent,
     ThemeToggleButtonComponent,
     NotificationDropdownComponent,
-    UserDropdownComponent,
+    UserDropdownComponent
   ],
-  templateUrl: './app-header.component.html',
+
+  templateUrl: './app-header.component.html'
 })
 export class AppHeaderComponent {
+
+  // ==========================================
+  // MENÚ DE OPCIONES EN MÓVILES
+  // ==========================================
+
   isApplicationMenuOpen = false;
+
   readonly isMobileOpen$;
 
-  @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
+  // ==========================================
+  // CONSTRUCTOR
+  // ==========================================
 
-  constructor(public sidebarService: SidebarService) {
-    this.isMobileOpen$ = this.sidebarService.isMobileOpen$;
+  constructor(
+      public sidebarService: SidebarService
+  ) {
+
+    this.isMobileOpen$ =
+        this.sidebarService.isMobileOpen$;
   }
 
-  handleToggle() {
+  // ==========================================
+  // ABRIR O CERRAR MENÚ LATERAL
+  // ==========================================
+
+  handleToggle(): void {
+
     if (window.innerWidth >= 1280) {
+
+      // Escritorio:
+      // Expandir o contraer el sidebar.
+
       this.sidebarService.toggleExpanded();
+
     } else {
+
+      // Móviles:
+      // Abrir o cerrar el sidebar.
+
       this.sidebarService.toggleMobileOpen();
     }
   }
 
-  toggleApplicationMenu() {
-    this.isApplicationMenuOpen = !this.isApplicationMenuOpen;
-  }
+  // ==========================================
+  // OPCIONES DEL ENCABEZADO EN MÓVILES
+  // ==========================================
 
-  ngAfterViewInit() {
-    document.addEventListener('keydown', this.handleKeyDown);
-  }
+  toggleApplicationMenu(): void {
 
-  ngOnDestroy() {
-    document.removeEventListener('keydown', this.handleKeyDown);
+    this.isApplicationMenuOpen =
+        !this.isApplicationMenuOpen;
   }
-
-  handleKeyDown = (event: KeyboardEvent) => {
-    if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
-      event.preventDefault();
-      this.searchInput?.nativeElement.focus();
-    }
-  };
 }

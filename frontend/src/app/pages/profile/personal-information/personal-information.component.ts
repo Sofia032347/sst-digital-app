@@ -1,123 +1,194 @@
-import { CommonModule } from '@angular/common';
-import { Component, Input, OnInit } from '@angular/core';
-import { defaultPersonalInfo } from './data';
-import { EditPersonalInfoDialogComponent } from './edit-dialog';
-import { InfoFieldComponent } from './info-field.component';
-import { SocialLinksComponent } from './social-links.component';
-import { PersonalInfo } from './types';
-import { ButtonComponent } from '../../../shared/components/ui/button/button.component';
+import {CommonModule} from '@angular/common';
+import {ChangeDetectorRef, Component, inject, Input, NgZone, OnInit} from '@angular/core';
+import Swal from 'sweetalert2';
+import {defaultPersonalInfo} from './data';
+import {PersonalInfo} from './types';
+import {InfoFieldComponent} from './info-field.component';
+import {EditPersonalInfoDialogComponent} from './edit-dialog';
+import {ButtonComponent} from '../../../shared/components/ui/button/button.component';
+import {PerfilService, PerfilUsuario} from '../../../services/perfil.service';
+import {firstValueFrom} from "rxjs";
 
 @Component({
-  selector: 'app-personal-information',
-  imports: [ButtonComponent, 
-    CommonModule,
-    InfoFieldComponent,
-    SocialLinksComponent,
-    EditPersonalInfoDialogComponent,
-  ],
-  host: {
-    class: 'block',
-  },
-  template: `
-    <div class="group/card relative flex flex-col gap-5 overflow-hidden rounded-xl border border-gray-200 bg-white p-5 sm:p-6 lg:p-7 dark:border-gray-700 dark:bg-white/3">
-      <!-- Top Header Row: Title & Edit Button -->
-      <div class="flex items-center justify-between gap-4">
-        <h2 class="text-base font-semibold text-gray-800 sm:text-lg dark:text-white/90">
-          Personal Information
-        </h2>
-
-        <button app-button variant="unstyled"
-          type="button"
-          (click)="isDialogOpen = true"
-          class="shadow-theme-xs flex h-9 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-800 cursor-pointer dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/3 dark:hover:text-gray-200"
-        >
-          <svg width="18" height="18" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg" class="size-4.5">
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M17.091 3.532a2.25 2.25 0 00-3.182 0l-8.302 8.302c-.308.308-.52.7-.61 1.126l-.735 3.485a.75.75 0 00.888.889l3.485-.735a2.25 2.25 0 001.127-.611l8.301-8.302a2.25 2.25 0 000-3.182l-.972-.972zm-2.121 1.06a.75.75 0 011.06 0l.973.973a.75.75 0 010 1.06l-.899.899-2.033-2.033.899-.898zm-1.96 1.96l-6.342 6.342a.75.75 0 00-.203.376l-.498 2.358 2.358-.497a.75.75 0 00.376-.204l6.343-6.342-2.033-2.033z" fill="currentColor"/>
-          </svg>
-          <span>Edit</span>
-        </button>
-      </div>
-
-      <!-- Profile Pic & Basic Meta -->
-      <div class="mt-2 flex items-center gap-4 sm:gap-6">
-        <div class="relative flex size-16 shrink-0 overflow-hidden rounded-full sm:size-20">
-          @if (profileData.avatarUrl) {
-            <img
-              [src]="profileData.avatarUrl"
-              [alt]="profileData.fullName || 'User profile'"
-              class="aspect-square size-full object-cover"
-            />
-          } @else {
-            <div class="flex size-full items-center justify-center bg-brand-400 text-xl font-medium text-white sm:text-2xl dark:bg-brand-400 dark:text-white">
-              {{ initialLetter }}
-            </div>
-          }
-        </div>
-
-        <div class="flex flex-col gap-1">
-          <h3 class="text-base font-semibold text-gray-800 sm:text-lg dark:text-white/90">
-            {{ profileData.fullName }}
-          </h3>
-
-          <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 sm:text-sm dark:text-gray-400">
-            <span>{{ profileData.role }}</span>
-            <span class="inline-block h-3.5 w-px bg-gray-300 dark:bg-gray-700"></span>
-            <span>{{ profileData.location }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Details & Social Links Grid -->
-      <div class="mt-2 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <div class="flex flex-col gap-6">
-          <app-info-field label="First Name" [value]="profileData.firstName" />
-          <app-info-field label="Email address" [value]="profileData.email" />
-        </div>
-
-        <div class="flex flex-col gap-6">
-          <app-info-field label="Last Name" [value]="profileData.lastName" />
-          <app-info-field label="Phone" [value]="profileData.phone" />
-        </div>
-
-        <div class="flex flex-col gap-6">
-          <app-info-field label="Bio" [value]="profileData.bio" />
-        </div>
-
-        <div class="flex flex-col gap-6">
-          <app-social-links [socialLinks]="profileData.socialLinks" />
-        </div>
-      </div>
-    </div>
-
-    <!-- Edit Personal Information Dialog -->
-    <app-edit-personal-info-dialog
-      [isOpen]="isDialogOpen"
-      [initialData]="profileData"
-      (openChange)="isDialogOpen = $event"
-      (save)="handleSave($event)"
-    />
-  `
+    selector: 'app-personal-information',
+    standalone: true,
+    imports: [
+        CommonModule,
+        ButtonComponent,
+        InfoFieldComponent,
+        EditPersonalInfoDialogComponent
+    ],
+    host: {
+        class: 'block'
+    },
+    templateUrl: './personal-information.component.html'
 })
 export class PersonalInformationComponent implements OnInit {
-  @Input() data: PersonalInfo = defaultPersonalInfo;
 
-  profileData: PersonalInfo = defaultPersonalInfo;
-  isDialogOpen = false;
+    private readonly perfilService = inject(PerfilService);
 
-  ngOnInit() {
-    if (this.data) {
-      this.profileData = { ...this.data };
+    @Input() data: PersonalInfo = defaultPersonalInfo;
+
+    isDialogOpen = false;
+    cargandoPerfil = true;
+    errorPerfil = false;
+    guardando = false;
+
+    private perfilReal: PerfilUsuario | null = null;
+
+    private readonly cdr = inject(ChangeDetectorRef);
+    private readonly ngZone = inject(NgZone);
+
+
+    profileData: PersonalInfo = {
+        ...defaultPersonalInfo,
+        fullName: '',
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        bio: '',
+        avatarUrl: ''
+    };
+
+    private aplicarPerfil(perfil: PerfilUsuario): void {
+        this.ngZone.run(() => {
+            this.perfilReal = perfil;
+
+            this.profileData = {
+                ...this.data,
+                fullName: perfil.nombre,
+                firstName: perfil.nombre,
+                lastName: '',
+                email: perfil.email,
+                phone: '',
+                bio: perfil.departamento ?? '',
+                avatarUrl: ''
+            };
+
+            this.cdr.markForCheck();
+        });
     }
-  }
 
-  get initialLetter(): string {
-    return this.profileData.firstName?.trim()
-      ? this.profileData.firstName.trim()[0].toUpperCase()
-      : 'M';
-  }
+    get iniciales(): string {
 
-  handleSave(updated: PersonalInfo) {
-    this.profileData = updated;
-  }
+        const partes = (this.profileData.fullName || '')
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
+
+        if (partes.length === 0) {
+            return 'U';
+        }
+
+        return partes
+            .slice(0, 2)
+            .map(parte => parte.charAt(0).toUpperCase())
+            .join('');
+    }
+
+    ngOnInit(): void {
+        void this.cargarPerfil();
+    }
+
+
+    async cargarPerfil(): Promise<void> {
+        this.cargandoPerfil = true;
+        this.errorPerfil = false;
+        this.cdr.markForCheck();
+
+        try {
+            const perfil = await firstValueFrom(
+                this.perfilService.obtenerPerfil()
+            );
+
+            this.aplicarPerfil(perfil);
+
+        } catch (error) {
+            console.error('No se pudo cargar el perfil:', error);
+
+            this.ngZone.run(() => {
+                this.errorPerfil = true;
+                this.cdr.markForCheck();
+            });
+
+            await Swal.fire({
+                icon: 'error',
+                title: 'No se pudo cargar el perfil',
+                text: 'Verifica tu conexión e inténtalo nuevamente.',
+                confirmButtonText: 'Entendido'
+            });
+
+        } finally {
+            this.ngZone.run(() => {
+                this.cargandoPerfil = false;
+                this.cdr.markForCheck();
+            });
+        }
+    }
+
+
+    async handleSave(updated: PersonalInfo): Promise<void> {
+
+        if (this.guardando || !this.perfilReal) {
+            return;
+        }
+
+        const departamento = (updated.bio ?? '').trim();
+
+        if (!departamento || departamento.length > 100) {
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Departamento inválido',
+                text: 'Ingresa un departamento de máximo 100 caracteres.'
+            });
+
+            return;
+        }
+
+        this.guardando = true;
+        this.cdr.markForCheck();
+
+        try {
+            const actualizado =
+                await this.perfilService.actualizarDepartamento(
+                    departamento
+                );
+
+            // Actualizar la información visible inmediatamente.
+            this.aplicarPerfil(actualizado);
+
+            this.ngZone.run(() => {
+                this.isDialogOpen = false;
+                this.cdr.markForCheck();
+            });
+
+            await Swal.fire({
+                icon: 'success',
+                title: 'Perfil actualizado',
+                text: 'Tu departamento se guardó correctamente.',
+                timer: 1800,
+                showConfirmButton: false
+            });
+
+        } catch (error) {
+            console.error('Error guardando el perfil:', error);
+
+            await Swal.fire({
+                icon: 'error',
+                title: 'No se pudieron guardar los cambios',
+                text: 'Tu información anterior se ha conservado.'
+            });
+
+        } finally {
+            this.ngZone.run(() => {
+                this.guardando = false;
+                this.cdr.markForCheck();
+            });
+        }
+    }
 }
-export { PersonalInformationComponent as PersonalInformationSection };
+
+export {
+    PersonalInformationComponent as PersonalInformationSection
+};

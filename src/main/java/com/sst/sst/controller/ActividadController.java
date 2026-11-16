@@ -43,6 +43,7 @@ public class ActividadController {
 
     private static final int OBJETIVO_DIARIO = 4;
     private static final int DURACION_MINIMA_RUTINA_SEGUNDOS = 600;
+    private static final String SESION_INICIO_TRAMO = "inicioTramoActividadActual";
 
     // --- DASHBOARD RRHH ---
     @GetMapping("/rrhh")
@@ -357,27 +358,32 @@ public class ActividadController {
     // --- INICIAR PAUSA ---
     @PostMapping("/iniciar-pausa")
     @ResponseBody
+    @Transactional
     public ResponseEntity<Long> iniciarPausa(HttpSession session, Authentication authentication) {
         Usuario logueado = requerirUsuario(authentication);
+        LocalDate hoy = LocalDate.now();
 
-        // Evitar abrir dos actividades mientras la anterior sigue activa.
-        Long idActual = (Long) session.getAttribute("idActividadActual");
-        if (idActual != null) {
+        // Una segunda llamada desde la misma sesión reutiliza su actividad.
+        Object actual = session.getAttribute("idActividadActual");
+        if (actual instanceof Long idActual) {
             Optional<Actividad> existente = actividadRepository.findById(idActual);
             if (existente.isPresent()) {
                 validarPropietario(existente.get(), logueado);
                 if (Actividad.ESTADO_EN_PROCESO.equals(existente.get().getEstado())) {
+                    if (!(session.getAttribute(SESION_INICIO_TRAMO) instanceof LocalDateTime)) {
+                        session.setAttribute(SESION_INICIO_TRAMO, LocalDateTime.now());
+                    }
                     return ResponseEntity.ok(idActual);
                 }
             }
             session.removeAttribute("idActividadActual");
+            session.removeAttribute(SESION_INICIO_TRAMO);
         }
 
-        // La meta diaria definida por SST Digital es de cuatro pausas.
-        LocalDate hoy = LocalDate.now();
-        long completadasHoy = actividadRepository.findByUsuarioIdAndFechaBetween(
-                        logueado.getId(), hoy.atStartOfDay(), hoy.atTime(LocalTime.MAX))
-                .stream()
+        List<Actividad> actividadesHoy = actividadRepository.findByUsuarioIdAndFechaBetween(
+                logueado.getId(), hoy.atStartOfDay(), hoy.atTime(LocalTime.MAX));
+
+        long completadasHoy = actividadesHoy.stream()
                 .filter(a -> Actividad.ESTADO_COMPLETADA.equals(a.getEstado()))
                 .count();
         if (completadasHoy >= OBJETIVO_DIARIO) {
@@ -385,19 +391,29 @@ public class ActividadController {
                     "Ya alcanzaste el objetivo diario de pausas activas");
         }
 
+        if (actividadesHoy.size() >= OBJETIVO_DIARIO) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Ya registraste las 4 pausas permitidas hoy. " +
+                            "Puedes continuar las pausas incompletas pendientes."
+            );
+        }
+
         Actividad nuevaActividad = new Actividad();
         nuevaActividad.setUsuario(logueado);
         nuevaActividad.setDuracionSegundos(0);
+        nuevaActividad.setSegundosTranscurridos(0);
         nuevaActividad.setEjerciciosCompletados(0);
         nuevaActividad.setValidadoIA(false);
         nuevaActividad.setEstado(Actividad.ESTADO_EN_PROCESO);
 
         Actividad guardada = actividadRepository.save(nuevaActividad);
         session.setAttribute("idActividadActual", guardada.getId());
+        session.setAttribute(SESION_INICIO_TRAMO, LocalDateTime.now());
         return ResponseEntity.ok(guardada.getId());
     }
 
-    // --- FINALIZAR PAUSA: POST CON CSRF Y VALIDACIÓN DE PROPIETARIO ---
+    // --- FINALIZAR PAUSA ---
     @PostMapping("/finalizar-pausa")
     @ResponseBody
     @Transactional
@@ -405,23 +421,22 @@ public class ActividadController {
         Actividad actividad = obtenerActividadActualAutorizada(session, authentication);
         comprobarEnProceso(actividad);
 
-        int segundos = calcularSegundosTranscurridos(actividad);
+        // Duración acumulada: tramos anteriores + tramo iniciado/reanudado.
+        // No se contabiliza el intervalo que estuvo guardada como INCOMPLETA.
+        int segundos = calcularSegundosTranscurridos(actividad, session);
         if (segundos < DURACION_MINIMA_RUTINA_SEGUNDOS) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "La rutina aún no cumple el tiempo mínimo de 10 minutos");
         }
 
         actividad.setDuracionSegundos(segundos);
-        // Sin seguimiento verificable de fases en el servidor, no afirmar
-        // que los diez ejercicios fueron validados automáticamente.
-        actividad.setEjerciciosCompletados(0);
+        actividad.setSegundosTranscurridos(segundos);
+        // No declarar validación por IA sin comprobación real del servidor.
         actividad.setValidadoIA(false);
-        // COMPLETADA = finalización declarada por la interfaz; NO certificación por IA.
         actividad.setEstado(Actividad.ESTADO_COMPLETADA);
         Actividad guardada = actividadRepository.save(actividad);
-        notificacionService.registrarPausaCompletada(
-                guardada.getUsuario(), guardada);
-        session.removeAttribute("idActividadActual");
+        notificacionService.registrarPausaCompletada(guardada.getUsuario(), guardada);
+        limpiarSesionPausa(session);
 
         return ResponseEntity.ok("Pausa registrada como COMPLETADA (sin validación IA)");
     }
@@ -429,28 +444,34 @@ public class ActividadController {
     // --- BOTÓN CANCELAR: REGISTRAR INCOMPLETA ---
     @PostMapping("/boton-cancelar")
     @ResponseBody
+    @Transactional
     public ResponseEntity<String> botonCancelarPausa(HttpSession session, Authentication authentication) {
         Actividad actividad = obtenerActividadActualAutorizada(session, authentication);
         comprobarEnProceso(actividad);
 
-        actividad.setDuracionSegundos(calcularSegundosTranscurridos(actividad));
+        int segundos = calcularSegundosTranscurridos(actividad, session);
+        actividad.setDuracionSegundos(segundos);
+        actividad.setSegundosTranscurridos(segundos);
         actividad.setEstado(Actividad.ESTADO_INCOMPLETA);
         actividadRepository.save(actividad);
-        session.removeAttribute("idActividadActual");
+        limpiarSesionPausa(session);
         return ResponseEntity.ok("Registrada como INCOMPLETA");
     }
 
-    // --- SALIDA FORZADA (LOGOUT/VOLVER): REGISTRAR CANCELADA ---
+    // --- SALIDA FORZADA: REGISTRAR CANCELADA ---
     @PostMapping("/cancelar-pausa")
     @ResponseBody
+    @Transactional
     public ResponseEntity<String> cancelarPausaForzada(HttpSession session, Authentication authentication) {
         Actividad actividad = obtenerActividadActualAutorizada(session, authentication);
         comprobarEnProceso(actividad);
 
-        actividad.setDuracionSegundos(calcularSegundosTranscurridos(actividad));
+        int segundos = calcularSegundosTranscurridos(actividad, session);
+        actividad.setDuracionSegundos(segundos);
+        actividad.setSegundosTranscurridos(segundos);
         actividad.setEstado(Actividad.ESTADO_CANCELADA);
         actividadRepository.save(actividad);
-        session.removeAttribute("idActividadActual");
+        limpiarSesionPausa(session);
         return ResponseEntity.ok("Registrada como CANCELADA");
     }
 
@@ -536,7 +557,7 @@ public class ActividadController {
         // permanezca fuera de la rutina.
 
         int segundosCalculados =
-                calcularSegundosTranscurridos(actividad);
+                calcularSegundosTranscurridos(actividad, session);
 
         int segundosGuardados =
                 leerEntero(
@@ -598,7 +619,7 @@ public class ActividadController {
         Actividad guardada =
                 actividadRepository.save(actividad);
 
-        session.removeAttribute("idActividadActual");
+        limpiarSesionPausa(session);
 
         Map<String, Object> respuesta = new HashMap<>();
 
@@ -627,8 +648,37 @@ public class ActividadController {
     ) {
         Usuario usuario = requerirUsuario(authentication);
 
-        Actividad pendiente =
-                buscarUltimaPausaIncompleta(usuario.getId());
+
+        Actividad pendiente;
+
+        if (datos != null && datos.containsKey("id")) {
+            Long idSolicitado = leerLong(datos.get("id"));
+
+            if (idSolicitado == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "ID de pausa inválido"
+                );
+            }
+
+            pendiente = actividadRepository.findById(idSolicitado)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Pausa no encontrada"
+                    ));
+
+            validarPropietario(pendiente, usuario);
+
+            if (!Actividad.ESTADO_INCOMPLETA.equals(
+                    pendiente.getEstado())) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "La pausa no está incompleta"
+                );
+            }
+        } else {
+            pendiente = buscarUltimaPausaIncompleta(usuario.getId());
+        }
 
         if (pendiente == null) {
             throw new ResponseStatusException(
@@ -715,6 +765,8 @@ public class ActividadController {
                 "idActividadActual",
                 guardada.getId()
         );
+        // Una reanudación inicia un tramo NUEVO, sin contar la pausa guardada.
+        session.setAttribute(SESION_INICIO_TRAMO, LocalDateTime.now());
 
         Map<String, Object> respuesta = new HashMap<>();
 
@@ -887,13 +939,33 @@ public class ActividadController {
         }
     }
 
-    private int calcularSegundosTranscurridos(Actividad actividad) {
-        if (actividad.getFecha() == null) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "La actividad no tiene una fecha de inicio válida");
+    // ==========================================
+    // TIEMPO ACUMULADO POR TRAMOS
+    // ==========================================
+    private int calcularSegundosTranscurridos(Actividad actividad, HttpSession session) {
+        int acumulados = valorOZero(actividad.getSegundosTranscurridos());
+        LocalDateTime inicioTramo = null;
+        Object atributo = session.getAttribute(SESION_INICIO_TRAMO);
+        if (atributo instanceof LocalDateTime fechaInicio) {
+            inicioTramo = fechaInicio;
         }
-        long segundos = Duration.between(actividad.getFecha(), LocalDateTime.now()).getSeconds();
-        return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, segundos));
+
+        // Compatibilidad: ante una sesión antigua sin marcador, no sumar
+        // arbitrariamente todo el tiempo desde que se creó la actividad.
+        if (inicioTramo == null) {
+            inicioTramo = actividad.getUltimaActualizacion();
+        }
+        if (inicioTramo == null) {
+            inicioTramo = LocalDateTime.now();
+        }
+
+        long tramo = Math.max(0L, Duration.between(inicioTramo, LocalDateTime.now()).getSeconds());
+        return (int) Math.min(Integer.MAX_VALUE, (long) acumulados + tramo);
+    }
+
+    private void limpiarSesionPausa(HttpSession session) {
+        session.removeAttribute("idActividadActual");
+        session.removeAttribute(SESION_INICIO_TRAMO);
     }
 
     // --- API PENDIENTES ---
@@ -934,5 +1006,47 @@ public class ActividadController {
                     data.put("nombre", u.getNombre());
                     return data;
                 }).collect(Collectors.toList());
+    }
+
+    @GetMapping("/pausas-incompletas")
+    @ResponseBody
+    public ResponseEntity<List<Map<String, Object>>> listarPausasIncompletas(
+            Authentication authentication) {
+
+        Usuario usuario = requerirUsuario(authentication);
+        LocalDate hoy = LocalDate.now();
+
+        List<Map<String, Object>> resultado =
+                actividadRepository
+                        .findByUsuarioIdAndFechaBetween(
+                                usuario.getId(),
+                                hoy.atStartOfDay(),
+                                hoy.atTime(LocalTime.MAX)
+                        )
+                        .stream()
+                        .filter(a ->
+                                Actividad.ESTADO_INCOMPLETA.equals(a.getEstado())
+                        )
+                        .sorted(Comparator.comparing(
+                                Actividad::getFecha
+                        ).reversed())
+                        .map(a -> {
+                            Map<String, Object> pausa = new HashMap<>();
+                            pausa.put("id", a.getId());
+                            pausa.put("fecha", a.getFecha());
+                            pausa.put("estado", a.getEstado());
+                            pausa.put("indiceEjercicio",
+                                    valorOZero(a.getIndiceEjercicio()));
+                            pausa.put("indiceFase",
+                                    valorOZero(a.getIndiceFase()));
+                            pausa.put("tiempoRestante",
+                                    valorOZero(a.getTiempoRestante()));
+                            pausa.put("segundosTranscurridos",
+                                    valorOZero(a.getSegundosTranscurridos()));
+                            return pausa;
+                        })
+                        .toList();
+
+        return ResponseEntity.ok(resultado);
     }
 }

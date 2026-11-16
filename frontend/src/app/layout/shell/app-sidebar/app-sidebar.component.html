@@ -1,10 +1,10 @@
-
 <aside
-        class="fixed top-0 start-0 z-50 flex h-screen flex-col
-         border-e border-gray-200 bg-white px-5
-         text-gray-900 transition-all duration-300
-         ease-in-out dark:border-gray-800
-         dark:bg-gray-900 xl:translate-x-0"
+        class="fixed top-0 start-0 z-50 flex h-screen
+         flex-col border-e border-gray-200 bg-white
+         px-5 text-gray-900 transition-all
+         duration-300 ease-in-out
+         dark:border-gray-800 dark:bg-gray-900
+         xl:translate-x-0"
 
         [ngClass]="{
     'w-[290px]':
@@ -18,116 +18,133 @@
       (isHovered$ | async)
     ),
 
-    'translate-x-0': isMobileOpen$ | async,
+    'translate-x-0':
+      isMobileOpen$ | async,
 
     'max-xl:-translate-x-full max-xl:rtl:translate-x-full':
       !(isMobileOpen$ | async)
   }"
 
         (mouseenter)="onSidebarMouseEnter()"
+
         (mouseleave)="sidebarService.setHovered(false)"
 >
 
-  <!-- ====================================== -->
-  <!-- IDENTIDAD DE SST DIGITAL -->
-  <!-- ====================================== -->
+    <!-- LOGO SST DIGITAL -->
 
-  <div
-          class="flex items-center py-8"
-          [ngClass]="{
+    <div
+            class="flex items-center py-8"
+
+            [ngClass]="{
       'xl:justify-center': !(
         (isExpanded$ | async) ||
         (isHovered$ | async)
       ),
+
       'justify-start':
         (isExpanded$ | async) ||
         (isHovered$ | async)
     }"
-  >
-
-    <a
-            routerLink="/sst/empleado"
-            class="flex items-center gap-3"
-            aria-label="Ir al panel de SST Digital"
     >
 
-      <div
-              class="flex h-11 w-11 shrink-0 items-center
+        <a
+                [routerLink]="rutaInicio"
+                (click)="onMenuClick()"
+                class="flex items-center gap-3"
+                aria-label="Ir al inicio de SST Digital"
+        >
+
+            <!-- ICONO DEL LOGO -->
+
+            <div
+                    class="flex h-11 w-11 shrink-0 items-center
                justify-center rounded-xl bg-blue-600
                text-white shadow-sm"
-      >
-        <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="26"
-                height="26"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-        >
-          <path
-                  d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12
+            >
+
+                <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="26"
+                        height="26"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                >
+
+                    <path
+                            d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12
                5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8
                7.8L12 21l8.8-8.6a5.5 5.5
                0 0 0 0-7.8Z"
-          />
-          <path d="M4 12h4l2-3 3 6 2-3h5"/>
-        </svg>
-      </div>
+                    />
 
-      @if (
-      (isExpanded$ | async) ||
-      (isHovered$ | async) ||
-      (isMobileOpen$ | async)
-      ) {
+                    <path d="M4 12h4l2-3 3 6 2-3h5"/>
 
-      <div class="min-w-0">
-        <h1
-                class="text-lg font-bold tracking-tight
+                </svg>
+
+            </div>
+
+            <!-- NOMBRE DEL SISTEMA -->
+
+            @if (
+            (isExpanded$ | async) ||
+            (isHovered$ | async) ||
+            (isMobileOpen$ | async)
+            ) {
+
+            <div class="min-w-0">
+
+                <h1
+                        class="text-lg font-bold tracking-tight
                    text-gray-900 dark:text-white"
-        >
-          SST Digital
-        </h1>
+                >
+                    SST Digital
+                </h1>
 
-        <p
-                class="text-xs text-gray-500
+                <p
+                        class="text-xs text-gray-500
                    dark:text-gray-400"
-        >
-          Bienestar laboral
-        </p>
-      </div>
+                >
+                    Bienestar laboral
+                </p>
 
-      }
+            </div>
 
-    </a>
-  </div>
+            }
 
-  <!-- ====================================== -->
-  <!-- NAVEGACIÓN PRINCIPAL -->
-  <!-- ====================================== -->
+        </a>
 
-  <div
-          class="no-scrollbar flex flex-1 flex-col
+    </div>
+
+    <!-- ===================================== -->
+    <!-- CONTENIDO DEL MENÚ -->
+    <!-- ===================================== -->
+
+    <div
+            class="no-scrollbar flex flex-1 flex-col
            overflow-y-auto duration-300 ease-linear"
-  >
+    >
 
-    <nav class="mb-6">
+        <nav class="mb-6">
 
-      <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-4">
 
-        <div>
+                <div>
 
-          <!-- TÍTULO DEL MENÚ -->
+                    <!-- ================================= -->
+                    <!-- ENCABEZADO DEL MENÚ -->
+                    <!-- ================================= -->
 
-          <h2
-                  class="mb-4 flex text-xs font-semibold
+                    <h2
+                            class="mb-4 flex text-xs font-semibold
                    uppercase leading-5 tracking-wider
                    text-gray-400"
 
-                  [ngClass]="{
+                            [ngClass]="{
               'xl:justify-center': !(
                 (isExpanded$ | async) ||
                 (isHovered$ | async)
@@ -137,300 +154,177 @@
                 (isExpanded$ | async) ||
                 (isHovered$ | async)
             }"
-          >
+                    >
 
-            @if (
-            (isExpanded$ | async) ||
-            (isHovered$ | async) ||
-            (isMobileOpen$ | async)
-            ) {
-            Navegación
-            } @else {
+                        @if (
+                        (isExpanded$ | async) ||
+                        (isHovered$ | async) ||
+                        (isMobileOpen$ | async)
+                        ) {
 
-            <span aria-label="Navegación">
+                        Menú
+
+                        } @else {
+
+                        <span aria-label="Menú">
                 •••
               </span>
 
-            }
+                        }
 
-          </h2>
+                    </h2>
 
-          <!-- OPCIONES DEL MENÚ -->
 
-          <ul class="flex flex-col gap-1">
+                    <!-- OPCIONES DE NAVEGACIÓN -->
 
-            @for (
-            nav of navItems;
-            track $index;
-            let i = $index
-            ) {
+                    <ul class="flex flex-col gap-1">
 
-            <li>
+                        @for (
+                        nav of navItems;
+                        track nav.path
+                        ) {
 
-              <!-- ================================= -->
-              <!-- OPCIÓN CON SUBMENÚ -->
-              <!-- ================================= -->
+                        <li>
 
-              @if (nav.subItems) {
+                            <a
+                                    [routerLink]="nav.path"
+                                    (click)="onMenuClick()"
 
-              <button
-                      type="button"
-                      (click)="toggleSubmenu('main', i)"
+                                    class="group menu-item"
 
-                      class="menu-item group w-full cursor-pointer"
+                                    [class.menu-item-active]="
+                    isActive(nav.path)
+                  "
 
-                      [class.menu-item-active]="
-                      isItemActive(nav, 'main', i)
-                    "
+                                    [class.menu-item-inactive]="
+                    !isActive(nav.path)
+                  "
 
-                      [class.menu-item-inactive]="
-                      !isItemActive(nav, 'main', i)
-                    "
+                                    [attr.aria-current]="
+                    isActive(nav.path) ? 'page' : null
+                  "
 
-                      [attr.aria-expanded]="
-                      openSubmenu === 'main-' + i
-                    "
+                                    [attr.title]="nav.name"
 
-                      [ngClass]="{
-                      'xl:justify-center': !(
-                        (isExpanded$ | async) ||
-                        (isHovered$ | async)
-                      ),
-
-                      'xl:justify-start':
-                        (isExpanded$ | async) ||
-                        (isHovered$ | async)
-                    }"
-              >
-
-                <!-- ICONO -->
-
-                <span
-                        class="menu-item-icon-size"
-
-                        [class.menu-item-icon-active]="
-                        isItemActive(nav, 'main', i)
-                      "
-
-                        [class.menu-item-icon-inactive]="
-                        !isItemActive(nav, 'main', i)
-                      "
-
-                        [innerHTML]="nav.icon | safeHtml"
-                ></span>
-
-                <!-- NOMBRE -->
-
-                @if (
-                (isExpanded$ | async) ||
-                (isHovered$ | async) ||
-                (isMobileOpen$ | async)
-                ) {
-
-                <span class="menu-item-text">
-                        {{ nav.name }}
-                      </span>
-
-                <!-- FLECHA DEL DESPLEGABLE -->
-
-                <svg
-                        class="ms-auto h-5 w-5
-                               transition-transform duration-200"
-
-                        [class.rotate-180]="
-                          openSubmenu === 'main-' + i
-                        "
-
-                        width="20"
-                        height="20"
-                        viewBox="0 0 20 20"
-                        fill="none"
-
-                        aria-hidden="true"
-                >
-                  <path
-                          d="M4.8 7.4 10 12.6l5.2-5.2"
-                          stroke="currentColor"
-                          stroke-width="1.5"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                  />
-                </svg>
-
-                }
-
-              </button>
-
-              <!-- ================================= -->
-              <!-- CONTENIDO DESPLEGABLE -->
-              <!-- ================================= -->
-
-              <div
-                      class="overflow-hidden
-                           transition-all duration-300"
-
-                      [id]="'main-' + i"
-
-                      [style.display]="
+                                    [ngClass]="{
+                    'xl:justify-center': !(
                       (isExpanded$ | async) ||
-                      (isHovered$ | async) ||
-                      (isMobileOpen$ | async)
-                        ? 'block'
-                        : 'none'
-                    "
+                      (isHovered$ | async)
+                    ),
 
-                      [ngStyle]="{
-                      height:
-                        openSubmenu === 'main-' + i
-                          ? (subMenuHeights['main-' + i] || 0) + 'px'
-                          : '0px'
-                    }"
-              >
+                    'xl:justify-start':
+                      (isExpanded$ | async) ||
+                      (isHovered$ | async)
+                  }"
+                            >
 
-                <ul class="mt-2 ms-9 space-y-1">
+                                <!-- ICONO CON ANGULAR ICONS -->
 
-                  @for (
-                  subItem of nav.subItems;
-                  track $index
-                  ) {
+                                <span
+                                        class="menu-item-icon-size flex shrink-0 items-center justify-center"
+                                        [class.menu-item-icon-active]="isActive(nav.path)"
+                                        [class.menu-item-icon-inactive]="!isActive(nav.path)"
+                                >
+                                    <ng-icon
+                                            [name]="nav.icon"
+                                            size="22"
+                                            aria-hidden="true"
+                                    />
+                                </span>
 
-                  <li>
+                                <!-- NOMBRE DEL MÓDULO -->
 
-                    <a
-                            [routerLink]="subItem.path"
+                                @if (
+                                (isExpanded$ | async) ||
+                                (isHovered$ | async) ||
+                                (isMobileOpen$ | async)
+                                ) {
 
-                            (click)="onSubmenuClick()"
+                                <span class="menu-item-text">
+                      {{ nav.name }}
+                    </span>
 
-                            class="group menu-dropdown-item"
+                                }
 
-                            [class.menu-dropdown-item-active]="
-                              isActive(subItem.path)
-                            "
+                            </a>
 
-                            [class.menu-dropdown-item-inactive]="
-                              !isActive(subItem.path)
-                            "
+                        </li>
+
+                        }
+
+                    </ul>
+
+                    <!-- ================================= -->
+                    <!-- MENÚ SIN OPCIONES -->
+                    <!-- ================================= -->
+
+                    @if (
+                    !cargandoMenu &&
+                    !errorMenu &&
+                    navItems.length === 0
+                    ) {
+
+                    @if (
+                    (isExpanded$ | async) ||
+                    (isHovered$ | async) ||
+                    (isMobileOpen$ | async)
+                    ) {
+
+                    <p
+                            class="px-3 py-3 text-xs
+                       text-gray-500 dark:text-gray-400"
                     >
+                        No hay opciones disponibles
+                        para tu perfil.
+                    </p>
 
-                      {{ subItem.name }}
+                    }
 
-                    </a>
+                    }
 
-                  </li>
+                </div>
 
-                  }
+            </div>
 
-                </ul>
+        </nav>
 
-              </div>
+        <!-- ===================================== -->
+        <!-- TARJETA INFERIOR DEL SIDEBAR -->
+        <!-- ===================================== -->
 
-              } @else {
+        @if (
+        (isExpanded$ | async) ||
+        (isHovered$ | async) ||
+        (isMobileOpen$ | async)
+        ) {
 
-              <!-- ================================= -->
-              <!-- OPCIÓN SIN SUBMENÚ -->
-              <!-- ================================= -->
+        <div
+                class="mt-auto mb-5 rounded-xl
+               border border-blue-100
+               bg-blue-50 p-4
+               dark:border-blue-900
+               dark:bg-blue-950/30"
+        >
 
-              @if (nav.path) {
+            <p
+                    class="text-sm font-semibold
+                 text-gray-900 dark:text-white"
+            >
+                Bienestar y prevención
+            </p>
 
-              <a
-                      [routerLink]="nav.path"
-
-                      (click)="onSingleMenuClick()"
-
-                      class="group menu-item"
-
-                      [class.menu-item-active]="
-                        isActive(nav.path)
-                      "
-
-                      [class.menu-item-inactive]="
-                        !isActive(nav.path)
-                      "
-
-                      [ngClass]="{
-                        'xl:justify-center': !(
-                          (isExpanded$ | async) ||
-                          (isHovered$ | async)
-                        ),
-
-                        'xl:justify-start':
-                          (isExpanded$ | async) ||
-                          (isHovered$ | async)
-                      }"
-              >
-
-                      <span
-                              class="menu-item-icon-size"
-
-                              [innerHTML]="nav.icon | safeHtml"
-                      ></span>
-
-                @if (
-                (isExpanded$ | async) ||
-                (isHovered$ | async) ||
-                (isMobileOpen$ | async)
-                ) {
-
-                <span class="menu-item-text">
-                          {{ nav.name }}
-                        </span>
-
-                }
-
-              </a>
-
-              }
-
-              }
-
-            </li>
-
-            }
-
-          </ul>
+            <p
+                    class="mt-2 text-xs leading-5
+                 text-gray-500 dark:text-gray-400"
+            >
+                Realiza tus pausas activas y lleva
+                el seguimiento de tu bienestar laboral.
+            </p>
 
         </div>
 
-      </div>
-
-    </nav>
-
-    <!-- ====================================== -->
-    <!-- PIE DE PÁGINA -->
-    <!-- ====================================== -->
-
-    @if (
-    (isExpanded$ | async) ||
-    (isHovered$ | async) ||
-    (isMobileOpen$ | async)
-    ) {
-
-    <div
-            class="mt-auto mb-5 rounded-xl
-               border border-blue-100 bg-blue-50
-               p-4 dark:border-blue-900
-               dark:bg-blue-950/30"
-    >
-
-      <p
-              class="text-sm font-semibold
-                 text-gray-900 dark:text-white"
-      >
-        Bienestar y prevención
-      </p>
-
-      <p
-              class="mt-2 text-xs leading-5
-                 text-gray-500 dark:text-gray-400"
-      >
-        Realiza tus pausas activas y lleva
-        el seguimiento de tu bienestar laboral.
-      </p>
+        }
 
     </div>
-
-    }
-
-  </div>
 
 </aside>

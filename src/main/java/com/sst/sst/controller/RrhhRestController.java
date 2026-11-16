@@ -4,15 +4,12 @@ package com.sst.sst.controller;
 import com.sst.sst.model.Actividad;
 import com.sst.sst.model.Rol;
 import com.sst.sst.model.Usuario;
-
 import com.sst.sst.repository.ActividadRepository;
 import com.sst.sst.repository.RegistroAccesoRepository;
 import com.sst.sst.repository.RolRepository;
 import com.sst.sst.repository.UsuarioRepository;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -67,7 +64,8 @@ public class RrhhRestController {
             String email,
             String departamento,
             String rol
-    ) {}
+    ) {
+    }
 
     public record GuardarEmpleadoDto(
             String nombre,
@@ -75,7 +73,8 @@ public class RrhhRestController {
             String departamento,
             String rol,
             String password
-    ) {}
+    ) {
+    }
 
     public record ResumenRrhhDto(
             long totalEmpleados,
@@ -83,7 +82,8 @@ public class RrhhRestController {
             long pausasIncompletas,
             long pausasCanceladas,
             long pausasEnProceso
-    ) {}
+    ) {
+    }
 
     public record ActividadDto(
             Long id,
@@ -94,7 +94,8 @@ public class RrhhRestController {
             String estado,
             int segundosRealizados,
             int porcentaje
-    ) {}
+    ) {
+    }
 
     // =========================================
     // SEGURIDAD: SOLO RRHH
@@ -748,4 +749,70 @@ public class RrhhRestController {
 
         return ResponseEntity.ok(respuesta);
     }
+
+    // ============================================
+    // HISTORIAL PERSONAL DE RRHH
+    // GET /api/rrhh/mis-actividades
+    // ============================================
+
+    public record ActividadPersonalDto(
+            Long id,
+            String fecha,
+            String estado,
+            Integer duracionSegundos
+    ) {
+    }
+
+    @GetMapping("/mis-actividades")
+    public ResponseEntity<List<ActividadPersonalDto>>
+    obtenerMisActividades(
+            @RequestParam LocalDate desde,
+            @RequestParam LocalDate hasta,
+            Authentication authentication
+    ) {
+        exigirRrhh(authentication);
+
+        if (desde.isAfter(hasta)
+                || desde.plusDays(61).isBefore(hasta)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Selecciona un rango válido de máximo 62 días"
+            );
+        }
+
+        Usuario usuario = usuarioRepository
+                .findByEmail(authentication.getName())
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.UNAUTHORIZED,
+                                "Usuario autenticado no encontrado"
+                        )
+                );
+
+        List<ActividadPersonalDto> registros =
+                actividadRepository
+                        .findByUsuarioIdAndFechaBetween(
+                                usuario.getId(),
+                                desde.atStartOfDay(),
+                                hasta.atTime(LocalTime.MAX)
+                        )
+                        .stream()
+                        .sorted(
+                                Comparator.comparing(
+                                        Actividad::getFecha
+                                ).reversed()
+                        )
+                        .map(actividad ->
+                                new ActividadPersonalDto(
+                                        actividad.getId(),
+                                        actividad.getFecha().toString(),
+                                        actividad.getEstado(),
+                                        actividad.getDuracionSegundos()
+                                )
+                        )
+                        .toList();
+
+        return ResponseEntity.ok(registros);
+    }
+
 }

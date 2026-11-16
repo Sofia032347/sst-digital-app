@@ -1,174 +1,279 @@
+import {Routes} from '@angular/router';
 
-import { Routes } from '@angular/router';
+import {AppLayoutComponent} from './layout/shell/app-layout/app-layout.component';
 
-import { EcommerceComponent } from './pages/dashboard/ecommerce/ecommerce.component';
-import { ProfileComponent } from './pages/profile/profile.component';
-import { FormElementsComponent } from './pages/forms/form-elements/form-elements.component';
-import { BasicTablesComponent } from './pages/tables/basic-tables/basic-tables.component';
-import { BlankComponent } from './pages/blank/blank.component';
-import { NotFoundComponent } from './pages/other-page/not-found/not-found.component';
-import { AppLayoutComponent } from './layout/shell/app-layout/app-layout.component';
-import { InvoiceComponent } from './pages/ecommerce/invoice/invoice.component';
-import { LineChartComponent } from './pages/charts/line-chart/line-chart.component';
-import { BarChartComponent } from './pages/charts/bar-chart/bar-chart.component';
-import { AlertsComponent } from './pages/ui-elements/alerts/alerts.component';
-import { AvatarElementComponent } from './pages/ui-elements/avatars/avatars.component';
-import { BadgesComponent } from './pages/ui-elements/badge/badge.component';
-import { ButtonsComponent } from './pages/ui-elements/buttons/buttons.component';
-import { ImagesComponent } from './pages/ui-elements/images/images.component';
-import { VideosComponent } from './pages/ui-elements/videos/videos.component';
-import { SignInComponent } from './pages/auth-pages/sign-in/sign-in.component';
-import { SignUpComponent } from './pages/auth-pages/sign-up/sign-up.component';
-import { CalendarComponent } from './pages/calendar/calendar.component';
+import {EmpleadoDashboardComponent} from './pages/sst/empleado-dashboard/empleado-dashboard.component';
 
-import { EmpleadoDashboardComponent }
-  from './pages/sst/empleado-dashboard/empleado-dashboard.component';
+import {ProfileComponent} from './pages/profile/profile.component';
+
+import {SignInComponent} from './pages/auth-pages/sign-in/sign-in.component';
+
+import {NotFoundComponent} from './pages/other-page/not-found/not-found.component';
+
+import {roleGuard} from './core/guards/role.guard';
+import {authChildGuard, authGuard} from './core/guards/auth.guard';
 
 export const routes: Routes = [
-  {
-    path: '',
-    component: AppLayoutComponent,
-    children: [
 
-      // ==========================================
-      // PÁGINA PRINCIPAL SST DIGITAL
-      // ==========================================
+    // ==========================================
+    // SST DIGITAL - LAYOUT COMPARTIDO
+    // ==========================================
 
-      {
+    {
         path: '',
-        redirectTo: 'sst/empleado',
+        component: AppLayoutComponent,
+
+        canActivate: [authGuard],
+        canActivateChild: [authChildGuard],
+
+        children: [
+
+            // ======================================
+            // REDIRECCIÓN PRINCIPAL
+            // ======================================
+
+            {
+                path: '',
+                loadComponent: () =>
+                    import('./pages/sst/inicio/inicio.component')
+                        .then(m => m.InicioComponent),
+
+                pathMatch: 'full'
+            },
+
+            // ======================================
+            // DASHBOARD EMPLEADO
+            // ======================================
+
+            {
+                path: 'sst/empleado',
+                component: EmpleadoDashboardComponent,
+
+                canActivate: [roleGuard],
+                data: {
+                    roles: ['EMPLEADO']
+                },
+
+                title: 'Inicio | SST Digital'
+            },
+
+            // ======================================
+            // RESUMEN PERSONAL - EMPLEADO
+            // ======================================
+
+            {
+                path: 'sst/empleado/resumen',
+
+                loadComponent: () =>
+                    import(
+                        './pages/sst/resumen-pausas/resumen-pausas.component'
+                        ).then(
+                        m => m.ResumenPausasComponent
+                    ),
+
+                canActivate: [roleGuard],
+                data: {
+                    roles: ['EMPLEADO']
+                },
+
+                title: 'Resumen de pausas activas | SST Digital'
+            },
+
+            // ======================================
+            // RESUMEN PERSONAL - RRHH
+            // ======================================
+
+            {
+                path: 'sst/rrhh/resumen',
+
+                loadComponent: () =>
+                    import(
+                        './pages/sst/resumen-pausas/resumen-pausas.component'
+                        ).then(
+                        m => m.ResumenPausasComponent
+                    ),
+
+                canActivate: [roleGuard],
+                data: {
+                    roles: ['RRHH']
+                },
+
+                title: 'Mi resumen de pausas activas | SST Digital'
+            },
+
+            // ======================================
+            // PAUSA ACTIVA - EMPLEADO
+            // ======================================
+
+            {
+                path: 'sst/empleado/pausa-activa',
+
+                loadComponent: () =>
+                    import(
+                        './pages/sst/pausa-activa/pausa-activa.component'
+                        ).then(
+                        m => m.PausaActivaComponent
+                    ),
+
+                canActivate: [roleGuard],
+                data: {
+                    roles: ['EMPLEADO']
+                },
+
+                title: 'Mi pausa activa | SST Digital'
+            },
+
+            // ======================================
+            // PAUSA ACTIVA - RRHH
+            // ======================================
+
+            {
+                path: 'sst/rrhh/pausa-activa',
+
+                loadComponent: () =>
+                    import(
+                        './pages/sst/pausa-activa/pausa-activa.component'
+                        ).then(
+                        m => m.PausaActivaComponent
+                    ),
+
+                canActivate: [roleGuard],
+                data: {
+                    roles: ['RRHH']
+                },
+
+                title: 'Mi pausa activa | SST Digital'
+            },
+
+            // ======================================
+            // DASHBOARD RRHH
+            // ======================================
+
+            {
+                path: 'sst/rrhh',
+
+                loadComponent: () =>
+                    import(
+                        './pages/sst/rrhh/rrhh-dashboard/rrhh-dashboard.component'
+                        ).then(
+                        m => m.RrhhDashboardComponent
+                    ),
+
+                canActivate: [roleGuard],
+                data: {
+                    roles: ['RRHH']
+                },
+
+                title: 'Inicio | SST Digital'
+            },
+
+            // ======================================
+            // GESTIÓN DE EMPLEADOS - RRHH
+            // ======================================
+
+            {
+                path: 'sst/rrhh/empleados',
+
+                loadComponent: () =>
+                    import(
+                        './pages/sst/rrhh/empleados/empleados.component'
+                        ).then(
+                        m => m.EmpleadosComponent
+                    ),
+
+                canActivate: [roleGuard],
+                data: {
+                    roles: ['RRHH']
+                },
+
+                title: 'Gestión de empleados | SST Digital'
+            },
+
+            // ======================================
+            // SEGUIMIENTO DE PAUSAS - RRHH
+            // ======================================
+
+            {
+                path: 'sst/rrhh/seguimiento-pausas',
+
+                loadComponent: () =>
+                    import(
+                        './pages/sst/rrhh/seguimiento-pausas/seguimiento-pausas.component'
+                        ).then(
+                        m => m.SeguimientoPausasComponent
+                    ),
+
+                canActivate: [roleGuard],
+                data: {
+                    roles: ['RRHH']
+                },
+
+                title: 'Seguimiento de pausas | SST Digital'
+            },
+
+            // ======================================
+            // MI CUENTA - EMPLEADO
+            // ======================================
+
+            {
+                path: 'sst/empleado/perfil',
+                component: ProfileComponent,
+
+                canActivate: [roleGuard],
+                data: {
+                    roles: ['EMPLEADO']
+                },
+
+                title: 'Mi cuenta | SST Digital'
+            },
+
+            // ======================================
+            // MI CUENTA - RRHH
+            // ======================================
+
+            {
+                path: 'sst/rrhh/perfil',
+                component: ProfileComponent,
+
+                canActivate: [roleGuard],
+                data: {
+                    roles: ['RRHH']
+                },
+
+                title: 'Mi cuenta | SST Digital'
+            }
+
+        ]
+    },
+
+    // ==========================================
+    // COMPATIBILIDAD CON RUTA ANTERIOR
+    // ==========================================
+
+    {
+        path: 'actividades/pausa-activa',
+        redirectTo: 'sst/empleado/pausa-activa',
         pathMatch: 'full'
-      },
+    },
 
-      // ==========================================
-      // DASHBOARD DEL EMPLEADO
-      // ==========================================
+    // ==========================================
+    // INICIAR SESIÓN
+    // ==========================================
 
-      {
-        path: 'sst/empleado',
-        component: EmpleadoDashboardComponent,
-        title: 'Panel del empleado | SST Digital'
-      },
+    {
+        path: 'signin',
+        component: SignInComponent,
+        title: 'Iniciar sesión | SST Digital'
+    },
 
-      // ==========================================
-      // DASHBOARD ORIGINAL DE TAILADMIN
-      // ==========================================
+    // ==========================================
+    // PÁGINA NO ENCONTRADA
+    // ==========================================
 
-      {
-        path: 'ecommerce',
-        component: EcommerceComponent,
-        title: 'Dashboard Ecommerce | TailAdmin'
-      },
+    {
+        path: '**',
+        component: NotFoundComponent,
+        title: 'Página no encontrada | SST Digital'
+    }
 
-      {
-        path: 'calendar',
-        component: CalendarComponent,
-        title: 'Calendario | TailAdmin'
-      },
-
-      {
-        path: 'profile',
-        component: ProfileComponent,
-        title: 'Perfil | TailAdmin'
-      },
-
-      {
-        path: 'form-elements',
-        component: FormElementsComponent,
-        title: 'Formularios | TailAdmin'
-      },
-
-      {
-        path: 'basic-tables',
-        component: BasicTablesComponent,
-        title: 'Tablas | TailAdmin'
-      },
-
-      {
-        path: 'blank',
-        component: BlankComponent,
-        title: 'Página en blanco | TailAdmin'
-      },
-
-      {
-        path: 'invoice',
-        component: InvoiceComponent,
-        title: 'Factura | TailAdmin'
-      },
-
-      {
-        path: 'line-chart',
-        component: LineChartComponent,
-        title: 'Gráfica de líneas | TailAdmin'
-      },
-
-      {
-        path: 'bar-chart',
-        component: BarChartComponent,
-        title: 'Gráfica de barras | TailAdmin'
-      },
-
-      {
-        path: 'alerts',
-        component: AlertsComponent,
-        title: 'Alertas | TailAdmin'
-      },
-
-      {
-        path: 'avatars',
-        component: AvatarElementComponent,
-        title: 'Avatares | TailAdmin'
-      },
-
-      {
-        path: 'badge',
-        component: BadgesComponent,
-        title: 'Insignias | TailAdmin'
-      },
-
-      {
-        path: 'buttons',
-        component: ButtonsComponent,
-        title: 'Botones | TailAdmin'
-      },
-
-      {
-        path: 'images',
-        component: ImagesComponent,
-        title: 'Imágenes | TailAdmin'
-      },
-
-      {
-        path: 'videos',
-        component: VideosComponent,
-        title: 'Videos | TailAdmin'
-      }
-    ]
-  },
-
-  // ==========================================
-  // PÁGINAS DE AUTENTICACIÓN DE TAILADMIN
-  // ==========================================
-
-  {
-    path: 'signin',
-    component: SignInComponent,
-    title: 'Iniciar sesión | TailAdmin'
-  },
-
-  {
-    path: 'signup',
-    component: SignUpComponent,
-    title: 'Registrarse | TailAdmin'
-  },
-
-  // ==========================================
-  // PÁGINAS NO ENCONTRADAS
-  // ==========================================
-
-  {
-    path: '**',
-    component: NotFoundComponent,
-    title: 'Página no encontrada | SST Digital'
-  }
 ];

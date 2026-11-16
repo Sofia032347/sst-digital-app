@@ -8,10 +8,7 @@ import java.time.LocalDateTime;
 @Table(name = "actividades")
 public class Actividad {
 
-    // ==========================================
     // ESTADOS DE LA PAUSA ACTIVA
-    // ==========================================
-
     public static final String ESTADO_EN_PROCESO =
             "EN_PROCESO";
 
@@ -24,17 +21,13 @@ public class Actividad {
     public static final String ESTADO_CANCELADA =
             "CANCELADA";
 
-    // ==========================================
     // IDENTIFICADOR
-    // ==========================================
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // ==========================================
     // EMPLEADO PROPIETARIO
-    // ==========================================
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
@@ -43,9 +36,7 @@ public class Actividad {
     )
     private Usuario usuario;
 
-    // ==========================================
     // INFORMACIÓN ORIGINAL DE LA ACTIVIDAD
-    // ==========================================
 
     @Column(name = "fecha")
     private LocalDateTime fecha;
@@ -66,9 +57,7 @@ public class Actividad {
     )
     private String estado;
 
-    // ==========================================
     // PROGRESO DE LOS EJERCICIOS
-    // ==========================================
 
     // Posición del ejercicio dentro de la rutina.
     // Comienza desde 0.

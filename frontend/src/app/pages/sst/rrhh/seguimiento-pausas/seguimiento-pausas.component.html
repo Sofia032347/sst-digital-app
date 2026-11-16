@@ -1,0 +1,1348 @@
+<div class="space-y-6">
+
+    <!-- ====================================== -->
+    <!-- ENCABEZADO -->
+    <!-- ====================================== -->
+
+    <div>
+        <h1
+                class="text-2xl font-bold
+                   text-gray-900 dark:text-white"
+        >
+            Seguimiento de pausas activas
+        </h1>
+
+        <p
+                class="mt-1 text-sm
+                   text-gray-500 dark:text-gray-400"
+        >
+            Consulta el cumplimiento diario, semanal
+            o de cualquier rango de fechas del personal.
+        </p>
+    </div>
+
+    <!-- ====================================== -->
+    <!-- MENSAJES -->
+    <!-- ====================================== -->
+
+    @if (error) {
+    <div
+            role="alert"
+            class="rounded-xl border border-red-200
+                   bg-red-50 p-4 text-sm text-red-700
+                   dark:border-red-900
+                   dark:bg-red-950/30 dark:text-red-300"
+    >
+        {{ error }}
+    </div>
+    }
+
+    <!-- MENSAJE DE ERROR AL DESCARGAR EXCEL -->
+    @if (mensajeErrorExcel) {
+    <div
+            role="alert"
+            class="flex items-center justify-between gap-3
+               rounded-xl border border-red-200
+               bg-red-50 p-4 text-sm text-red-700
+               dark:border-red-900
+               dark:bg-red-950/30 dark:text-red-300"
+    >
+        <span>{{ mensajeErrorExcel }}</span>
+
+        <button
+                type="button"
+                (click)="mensajeErrorExcel = ''"
+                aria-label="Cerrar mensaje"
+                class="text-lg font-bold hover:opacity-70"
+        >
+            ×
+        </button>
+    </div>
+    }
+
+    @if (cargando) {
+    <p
+            role="status"
+            class="text-xs text-blue-600 dark:text-blue-400"
+    >
+        Actualizando información...
+    </p>
+    }
+
+    <div class="grid grid-cols-1 items-start gap-5 xl:grid-cols-3">
+
+        <!-- ====================================== -->
+        <!-- CALENDARIO VISUAL -->
+        <!-- ====================================== -->
+
+        <section
+                class="min-w-0 rounded-2xl border border-gray-200
+               bg-white p-5 shadow-sm xl:col-span-2
+               dark:border-gray-800 dark:bg-gray-900"
+        >
+
+            <!-- FECHA DE SEGUIMIENTO -->
+
+            <div
+                    class="mb-5 flex flex-wrap items-center
+                   justify-between gap-4
+                   border-b border-gray-100 pb-5
+                   dark:border-gray-800"
+            >
+
+                <div>
+                    <p
+                            class="text-xs font-medium
+                           text-gray-500 dark:text-gray-400"
+                    >
+                        Fecha de seguimiento
+                    </p>
+
+                    <h2
+                            class="mt-1 text-xl font-bold
+                           text-gray-900 dark:text-white"
+                    >
+                        {{ textoFechasSeleccionadas }}
+                    </h2>
+
+                    <p
+                            class="mt-1 text-sm
+                           text-gray-500 dark:text-gray-400"
+                    >
+                        {{ cantidadDiasSeleccionados }}
+                        día(s) seleccionados
+                    </p>
+                </div>
+
+                <button
+                        type="button"
+                        (click)="irHoy()"
+                        class="rounded-lg bg-blue-600
+                       px-5 py-2.5 text-sm font-medium
+                       text-white transition
+                       hover:bg-blue-700"
+                >
+                    Hoy
+                </button>
+
+            </div>
+
+            <!-- TÍTULO Y NAVEGACIÓN -->
+
+            <div
+                    class="mb-5 flex flex-wrap items-center
+                   justify-between gap-4"
+            >
+
+                <div>
+                    <h3
+                            class="text-base font-semibold
+                           text-gray-900 dark:text-white"
+                    >
+                        Calendario de pausas activas
+                    </h3>
+
+                    <p
+                            class="mt-1 text-xs
+                           text-gray-500 dark:text-gray-400"
+                    >
+                        Primer clic: fecha inicial.
+                        Segundo clic: fecha final.
+                        Un nuevo clic comienza otra selección.
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-3">
+
+                    <button
+                            type="button"
+                            (click)="irMesAnterior()"
+                            aria-label="Mes anterior"
+                            class="flex h-10 w-10 items-center
+                           justify-center rounded-lg
+                           border border-gray-200
+                           text-xl text-gray-600
+                           hover:bg-gray-50
+                           dark:border-gray-700
+                           dark:text-gray-300
+                           dark:hover:bg-gray-800"
+                    >
+                        ‹
+                    </button>
+
+                    <span
+                            class="min-w-36 text-center
+                           text-sm font-semibold
+                           text-gray-900 dark:text-white"
+                    >
+                    {{ nombreMesVisible }}
+                </span>
+
+                    <button
+                            type="button"
+                            (click)="irMesSiguiente()"
+                            [disabled]="!puedeAvanzarMes"
+                            aria-label="Mes siguiente"
+                            class="flex h-10 w-10 items-center
+                           justify-center rounded-lg
+                           border border-gray-200
+                           text-xl text-gray-600
+                           hover:bg-gray-50
+                           disabled:cursor-not-allowed
+                           disabled:opacity-30
+                           dark:border-gray-700
+                           dark:text-gray-300
+                           dark:hover:bg-gray-800"
+                    >
+                        ›
+                    </button>
+
+                </div>
+
+            </div>
+
+            <!-- ENCABEZADOS DE LA SEMANA -->
+
+            <div class="mb-2 grid grid-cols-7 gap-1.5">
+
+                @for (dia of diasSemana; track $index) {
+
+                <div
+                        class="py-3 text-center text-xs
+                           font-semibold text-gray-500
+                           dark:text-gray-400"
+                >
+                    {{ dia }}
+                </div>
+
+                }
+
+            </div>
+
+            <!-- DÍAS DEL CALENDARIO -->
+
+            <div class="grid grid-cols-7 gap-1.5">
+
+                @for (dia of diasCalendario; track dia.fecha) {
+
+                <button
+                        type="button"
+                        (click)="seleccionarDia(dia)"
+                        [disabled]="dia.esFuturo"
+                        [attr.aria-label]="'Seleccionar ' + dia.fecha"
+                        [attr.aria-pressed]="dia.seleccionado"
+
+                        class="relative flex h-12 items-center
+                           justify-center rounded-xl
+                           border text-sm font-semibold
+                           transition-colors
+                           sm:h-16"
+
+                        [ngClass]="{
+
+                        'border-blue-600 bg-blue-600 text-white shadow-sm':
+                            dia.seleccionado,
+
+                        'border-blue-200 bg-blue-100 text-blue-800 dark:border-blue-800 dark:bg-blue-900/40 dark:text-blue-200':
+                            dia.enRango && !dia.seleccionado,
+
+                        'border-gray-200 bg-white text-gray-800 hover:border-blue-400 hover:bg-blue-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800':
+                            !dia.seleccionado &&
+                            !dia.enRango &&
+                            dia.perteneceAlMes &&
+                            !dia.esFuturo,
+
+                        'border-gray-100 bg-gray-50 text-gray-400 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-800/30':
+                            !dia.seleccionado &&
+                            !dia.enRango &&
+                            !dia.perteneceAlMes &&
+                            !dia.esFuturo,
+
+                        'cursor-not-allowed border-gray-100 bg-gray-50 text-gray-300 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-600':
+                            dia.esFuturo,
+
+                        'ring-2 ring-blue-400 ring-inset':
+                            dia.esHoy && !dia.seleccionado
+                    }"
+                >
+
+                    {{ dia.numero }}
+
+                    @if (dia.esHoy && !dia.seleccionado) {
+
+                    <span
+                            class="absolute bottom-1.5
+                                   h-1.5 w-1.5 rounded-full
+                                   bg-blue-600"
+                    ></span>
+
+                    }
+
+                    @if (dia.esInicio && dia.esFin) {
+
+                    <span
+                            class="absolute bottom-1 text-[9px]
+                                   text-white"
+                    >
+                            Inicio / Fin
+                        </span>
+
+                    }
+
+                </button>
+
+                }
+
+            </div>
+
+            <!-- LEYENDA -->
+
+            <div
+                    class="mt-5 flex flex-wrap gap-5
+                   border-t border-gray-100 pt-4
+                   text-xs text-gray-500
+                   dark:border-gray-800 dark:text-gray-400"
+            >
+
+                <div class="flex items-center gap-2">
+                <span
+                        class="h-3 w-3 rounded bg-blue-600"
+                ></span>
+                    Inicio y fin del rango
+                </div>
+
+                <div class="flex items-center gap-2">
+                <span
+                        class="h-3 w-3 rounded bg-blue-100
+                           dark:bg-blue-900/40"
+                ></span>
+                    Días incluidos
+                </div>
+
+                <div class="flex items-center gap-2">
+                <span
+                        class="h-3 w-3 rounded border-2
+                           border-blue-400"
+                ></span>
+                    Hoy
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ACTIVIDAD GENERAL -->
+
+        <section
+                class="min-w-0 rounded-2xl border border-gray-200
+                   bg-white p-5 shadow-sm xl:col-span-1
+                   dark:border-gray-800 dark:bg-gray-900"
+        >
+
+            <div>
+                <h2
+                        class="text-lg font-semibold
+                           text-gray-900 dark:text-white"
+                >
+                    Actividad general del período
+                </h2>
+
+                <p
+                        class="mt-1 text-xs
+                           text-gray-500 dark:text-gray-400"
+                >
+                    Cumplimiento de todos los usuarios,
+                    incluidos EMPLEADO y RRHH.
+                </p>
+            </div>
+
+            <!-- GRÁFICA GENERAL -->
+
+            <div class="my-6 flex justify-center">
+
+                <div
+                        class="flex h-44 w-44 items-center
+                           justify-center rounded-full"
+
+                        [style.background]="
+                        'conic-gradient(#16a34a 0% ' +
+                        porcentaje(resumenGeneral.cumplimiento) +
+                        '%, #e5e7eb ' +
+                        porcentaje(resumenGeneral.cumplimiento) +
+                        '% 100%)'
+                    "
+                >
+
+                    <div
+                            class="flex h-36 w-36 flex-col
+                               items-center justify-center
+                               rounded-full bg-white
+                               dark:bg-gray-900"
+                    >
+
+                        <span
+                                class="text-3xl font-bold
+                                   text-gray-900 dark:text-white"
+                        >
+                            {{ resumenGeneral.cumplimiento }}%
+                        </span>
+
+                        <span
+                                class="text-xs text-gray-500
+                                   dark:text-gray-400"
+                        >
+                            Cumplimiento
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <p
+                    class="mb-3 text-center text-xs
+                       text-gray-500 dark:text-gray-400"
+            >
+                {{ resumenGeneral.usuarios }}
+                usuarios evaluados
+            </p>
+
+            <div class="grid grid-cols-2 gap-3 text-sm">
+
+                <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                    <p class="text-xs text-gray-500">Esperadas</p>
+                    <p class="mt-1 text-xl font-bold dark:text-white">
+                        {{ resumenGeneral.esperadas }}
+                    </p>
+                </div>
+
+                <div class="rounded-lg bg-green-50 p-3 dark:bg-green-900/20">
+                    <p class="text-xs text-green-700">Completadas</p>
+                    <p class="mt-1 text-xl font-bold text-green-700">
+                        {{ resumenGeneral.completadas }}
+                    </p>
+                </div>
+
+                <div class="rounded-lg bg-amber-50 p-3 dark:bg-amber-900/20">
+                    <p class="text-xs text-amber-700">Incompletas</p>
+                    <p class="mt-1 text-xl font-bold text-amber-700">
+                        {{ resumenGeneral.incompletas }}
+                    </p>
+                </div>
+
+                <div class="rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
+                    <p class="text-xs text-red-700">Canceladas</p>
+                    <p class="mt-1 text-xl font-bold text-red-700">
+                        {{ resumenGeneral.canceladas }}
+                    </p>
+                </div>
+
+                <div class="rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
+                    <p class="text-xs text-blue-700">En proceso</p>
+                    <p class="mt-1 text-xl font-bold text-blue-700">
+                        {{ resumenGeneral.enProceso }}
+                    </p>
+                </div>
+
+                <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                    <p class="text-xs text-gray-500">No iniciadas</p>
+                    <p class="mt-1 text-xl font-bold dark:text-white">
+                        {{ resumenGeneral.noIniciadas }}
+                    </p>
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+    <!-- TABLAS -->
+
+    @if (datos && datosRango) {
+
+    <!-- BUSCADOR -->
+
+    <section
+            class="rounded-2xl border border-gray-200
+                   bg-white p-5 shadow-sm
+                   dark:border-gray-800 dark:bg-gray-900"
+    >
+
+        <label
+                for="buscarUsuario"
+                class="mb-2 block text-sm font-medium
+                       text-gray-700 dark:text-gray-300"
+        >
+            Buscar usuario en los informes
+        </label>
+
+        <input
+                id="buscarUsuario"
+                type="search"
+                [value]="busqueda"
+                (input)="actualizarBusqueda($any($event.target).value)"
+                placeholder="Nombre, correo o rol..."
+                class="h-11 w-full rounded-lg
+                       border border-gray-300
+                       bg-white px-4 text-sm
+                       text-gray-900 outline-none
+                       focus:border-blue-500
+                       dark:border-gray-700
+                       dark:bg-gray-800 dark:text-white"
+        />
+
+    </section>
+
+    <!-- TABLA DIARIA -->
+
+    <section
+            class="rounded-2xl border border-gray-200
+                   bg-white p-5 shadow-sm
+                   dark:border-gray-800 dark:bg-gray-900"
+    >
+
+        <div class="mb-5">
+
+            <h2
+                    class="text-lg font-semibold
+                           text-gray-900 dark:text-white"
+            >
+                Cumplimiento diario
+            </h2>
+
+            <p
+                    class="mt-1 text-sm
+                           text-gray-500 dark:text-gray-400"
+            >
+                Fecha consultada: {{ datos.fechaCorte }}
+            </p>
+
+        </div>
+
+        <div class="overflow-x-auto">
+
+            <table class="w-full min-w-[1150px] text-left text-sm">
+
+                <thead
+                        class="border-b border-gray-200
+                               bg-gray-50 text-gray-600
+                               dark:border-gray-800
+                               dark:bg-gray-800/50
+                               dark:text-gray-300"
+                >
+                <tr>
+                    <th class="px-4 py-3">Usuario</th>
+                    <th class="px-4 py-3">Rol</th>
+                    <th class="px-4 py-3 text-center">Esperadas</th>
+                    <th class="px-4 py-3 text-center">Completadas</th>
+                    <th class="px-4 py-3 text-center">Incompletas</th>
+                    <th class="px-4 py-3 text-center">Canceladas</th>
+                    <th class="px-4 py-3 text-center">En proceso</th>
+                    <th class="px-4 py-3 text-center">No iniciadas</th>
+                    <th class="px-4 py-3">Cumplimiento</th>
+                    <th class="px-4 py-3">Acciones</th>
+                </tr>
+                </thead>
+
+                <tbody>
+
+                @for (
+                usuario of registrosDiarios;
+                track usuario.usuarioId
+                ) {
+
+                <tr
+                        class="border-b border-gray-100
+                                       text-gray-700
+                                       dark:border-gray-800
+                                       dark:text-gray-300"
+                >
+
+                    <td class="px-4 py-4">
+                        <p class="font-medium">
+                            {{ usuario.nombre }}
+                        </p>
+
+                        <p class="text-xs text-gray-500">
+                            {{ usuario.email }}
+                        </p>
+                    </td>
+
+                    <td class="px-4 py-4">
+                        {{ usuario.rol }}
+                    </td>
+
+                    <td class="px-4 py-4 text-center">
+                        {{ usuario.esperadas }}
+                    </td>
+
+                    <td class="px-4 py-4 text-center text-green-600">
+                        {{ usuario.completadas }}
+                    </td>
+
+                    <td class="px-4 py-4 text-center text-amber-600">
+                        {{ usuario.incompletas }}
+                    </td>
+
+                    <td class="px-4 py-4 text-center text-red-600">
+                        {{ usuario.canceladas }}
+                    </td>
+
+                    <td class="px-4 py-4 text-center text-blue-600">
+                        {{ usuario.enProceso }}
+                    </td>
+
+                    <td class="px-4 py-4 text-center">
+                        {{ usuario.noIniciadas }}
+                    </td>
+
+                    <td class="px-4 py-4">
+
+                        <div class="flex items-center gap-2">
+
+                            <div
+                                    class="h-2 w-20 overflow-hidden
+                                                   rounded-full bg-gray-100
+                                                   dark:bg-gray-800"
+                            >
+                                <div
+                                        class="h-full rounded-full bg-blue-600"
+                                        [style.width.%]="porcentaje(usuario.cumplimiento)"
+                                ></div>
+                            </div>
+
+                            <span class="font-semibold">
+                                            {{ usuario.cumplimiento }}%
+                                        </span>
+
+                        </div>
+
+                    </td>
+
+
+                    <td class="px-4 py-4">
+
+                        <div class="flex flex-wrap items-center gap-2">
+
+                            <!-- VER DETALLE DIARIO -->
+                            <button
+                                    type="button"
+                                    (click)="verDetalle(usuario.usuarioId, 'dia')"
+                                    class="whitespace-nowrap rounded-lg
+                   border border-blue-200
+                   px-3 py-2 text-xs
+                   font-semibold text-blue-700
+                   transition hover:bg-blue-50
+                   dark:border-blue-800
+                   dark:text-blue-300
+                   dark:hover:bg-blue-900/20"
+                            >
+                                Ver detalle
+                            </button>
+
+                            <!-- DESCARGAR EXCEL DIARIO -->
+                            <button
+                                    type="button"
+                                    (click)="descargarExcelIndividualDia(usuario.usuarioId)"
+                                    [disabled]="descargandoExcel || !datosRango"
+                                    class="whitespace-nowrap rounded-lg
+                   border border-green-200
+                   px-3 py-2 text-xs
+                   font-semibold text-green-700
+                   transition hover:bg-green-50
+                   disabled:cursor-not-allowed
+                   disabled:opacity-50
+                   dark:border-green-800
+                   dark:text-green-300
+                   dark:hover:bg-green-900/20"
+                            >
+                                Descargar Excel
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+
+                } @empty {
+
+                <tr>
+                    <td
+                            colspan="10"
+                            class="px-4 py-10 text-center
+                                           text-gray-500"
+                    >
+                        No se encontraron usuarios.
+                    </td>
+                </tr>
+
+                }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+    <!-- TABLA DEL RANGO -->
+
+    <section
+            class="rounded-2xl border border-gray-200
+                   bg-white p-5 shadow-sm
+                   dark:border-gray-800 dark:bg-gray-900"
+    >
+
+
+        <div class="mb-5 flex flex-wrap items-center
+            justify-between gap-4">
+
+            <div>
+                <h2
+                        class="text-lg font-semibold
+                   text-gray-900 dark:text-white"
+                >
+                    Informe del período seleccionado
+                </h2>
+
+                <p
+                        class="mt-1 text-sm
+                   text-gray-500 dark:text-gray-400"
+                >
+                    Del {{ datosRango.inicio }}
+                    al {{ datosRango.fin }}
+                </p>
+            </div>
+
+            <!-- DESCARGAR INFORME GENERAL -->
+            <button
+                    type="button"
+                    (click)="descargarExcelGeneral()"
+                    [disabled]="descargandoExcel || !datosRango"
+                    class="inline-flex items-center justify-center
+               gap-2 rounded-lg bg-green-600
+               px-4 py-2.5 text-sm font-semibold
+               text-white transition hover:bg-green-700
+               disabled:cursor-not-allowed
+               disabled:opacity-50"
+            >
+                <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                >
+                    <path d="M12 3v12"/>
+                    <path d="m7 10 5 5 5-5"/>
+                    <path d="M5 17v3h14v-3"/>
+                </svg>
+
+                @if (descargandoExcel) {
+                Generando Excel...
+                } @else {
+                Descargar Excel general
+                }
+            </button>
+
+        </div>
+
+        <div class="overflow-x-auto">
+
+            <table class="w-full min-w-[1150px] text-left text-sm">
+
+                <thead
+                        class="border-b border-gray-200
+                               bg-gray-50 text-gray-600
+                               dark:border-gray-800
+                               dark:bg-gray-800/50
+                               dark:text-gray-300"
+                >
+                <tr>
+                    <th class="px-4 py-3">Usuario</th>
+                    <th class="px-4 py-3">Rol</th>
+                    <th class="px-4 py-3 text-center">Esperadas</th>
+                    <th class="px-4 py-3 text-center">Completadas</th>
+                    <th class="px-4 py-3 text-center">Incompletas</th>
+                    <th class="px-4 py-3 text-center">Canceladas</th>
+                    <th class="px-4 py-3 text-center">En proceso</th>
+                    <th class="px-4 py-3 text-center">No iniciadas</th>
+                    <th class="px-4 py-3">Cumplimiento</th>
+                    <th class="px-4 py-3">Acciones</th>
+                </tr>
+                </thead>
+
+                <tbody>
+
+                @for (
+                usuario of registrosRango;
+                track usuario.usuarioId
+                ) {
+
+                <tr
+                        class="border-b border-gray-100
+                                       text-gray-700
+                                       dark:border-gray-800
+                                       dark:text-gray-300"
+                >
+
+                    <td class="px-4 py-4">
+                        <p class="font-medium">
+                            {{ usuario.nombre }}
+                        </p>
+
+                        <p class="text-xs text-gray-500">
+                            {{ usuario.email }}
+                        </p>
+                    </td>
+
+                    <td class="px-4 py-4">
+                        {{ usuario.rol }}
+                    </td>
+
+                    <td class="px-4 py-4 text-center">
+                        {{ usuario.esperadas }}
+                    </td>
+
+                    <td class="px-4 py-4 text-center text-green-600">
+                        {{ usuario.completadas }}
+                    </td>
+
+                    <td class="px-4 py-4 text-center text-amber-600">
+                        {{ usuario.incompletas }}
+                    </td>
+
+                    <td class="px-4 py-4 text-center text-red-600">
+                        {{ usuario.canceladas }}
+                    </td>
+
+                    <td class="px-4 py-4 text-center text-blue-600">
+                        {{ usuario.enProceso }}
+                    </td>
+
+                    <td class="px-4 py-4 text-center">
+                        {{ usuario.noIniciadas }}
+                    </td>
+
+                    <td class="px-4 py-4">
+
+                        <div class="flex items-center gap-2">
+
+                            <div
+                                    class="h-2 w-20 overflow-hidden
+                                                   rounded-full bg-gray-100
+                                                   dark:bg-gray-800"
+                            >
+                                <div
+                                        class="h-full rounded-full bg-green-600"
+                                        [style.width.%]="porcentaje(usuario.cumplimiento)"
+                                ></div>
+                            </div>
+
+                            <span class="font-semibold">
+                                            {{ usuario.cumplimiento }}%
+                                        </span>
+
+                        </div>
+
+                    </td>
+
+
+                    <td class="px-4 py-4">
+
+                        <div class="flex flex-wrap items-center gap-2">
+
+                            <!-- VER DETALLE DEL PERÍODO -->
+                            <button
+                                    type="button"
+                                    (click)="verDetalle(usuario.usuarioId, 'rango')"
+                                    class="whitespace-nowrap rounded-lg
+                   border border-blue-200
+                   px-3 py-2 text-xs
+                   font-semibold text-blue-700
+                   transition hover:bg-blue-50
+                   dark:border-blue-800
+                   dark:text-blue-300
+                   dark:hover:bg-blue-900/20"
+                            >
+                                Ver detalle
+                            </button>
+
+                            <!-- DESCARGAR EXCEL DEL USUARIO -->
+                            <button
+                                    type="button"
+                                    (click)="descargarExcelIndividualRango(usuario.usuarioId)"
+                                    [disabled]="descargandoExcel || !datosRango"
+                                    class="whitespace-nowrap rounded-lg
+                   border border-green-200
+                   px-3 py-2 text-xs
+                   font-semibold text-green-700
+                   transition hover:bg-green-50
+                   disabled:cursor-not-allowed
+                   disabled:opacity-50
+                   dark:border-green-800
+                   dark:text-green-300
+                   dark:hover:bg-green-900/20"
+                            >
+                                Descargar Excel
+                            </button>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+
+                } @empty {
+
+                <tr>
+                    <td
+                            colspan="10"
+                            class="px-4 py-10 text-center
+                                           text-gray-500"
+                    >
+                        No se encontraron usuarios.
+                    </td>
+                </tr>
+
+                }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+    <p
+            class="text-xs leading-5
+                   text-gray-500 dark:text-gray-400"
+    >
+        El cumplimiento se calcula con una meta de cuatro
+        pausas diarias por usuario, incluidos sábados y domingos
+        durante las pruebas. Las pausas no iniciadas se estiman
+        a partir de los registros existentes.
+    </p>
+
+    }
+
+    <!-- ====================================== -->
+    <!-- MODAL DE DETALLE INDIVIDUAL -->
+    <!-- ====================================== -->
+
+    @if (detalleAbierto) {
+
+    @if (usuarioDetalle; as usuario) {
+
+    <div
+            class="fixed inset-0 z-[9999]
+                       flex items-center justify-center
+                       bg-gray-950/65 p-4"
+    >
+
+        <section
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="tituloDetallePausas"
+                class="flex max-h-[90vh] w-full max-w-3xl
+                           flex-col overflow-hidden rounded-2xl
+                           bg-white shadow-2xl
+                           dark:bg-gray-900"
+        >
+
+            <!-- CABECERA DEL MODAL -->
+
+            <div
+                    class="flex items-start
+                               justify-between gap-4
+                               border-b border-gray-200
+                               p-5 dark:border-gray-800"
+            >
+
+                <div>
+                    <h2
+                            id="tituloDetallePausas"
+                            class="text-xl font-bold
+                                       text-gray-900 dark:text-white"
+                    >
+                        Detalle de {{ usuario.nombre }}
+                    </h2>
+
+                    <p
+                            class="mt-1 text-sm
+                                       text-gray-500 dark:text-gray-400"
+                    >
+                        {{ usuario.email }}
+                        · {{ usuario.rol }}
+                    </p>
+
+                    <p
+                            class="mt-2 text-xs
+                                       text-gray-500 dark:text-gray-400"
+                    >
+                        @if (tipoDetalle === 'dia') {
+                        Informe diario:
+                        {{ fechaSeleccionada }}
+                        } @else {
+                        Del {{ datosRango?.inicio }}
+                        al {{ datosRango?.fin }}
+                        }
+                    </p>
+                </div>
+
+                <button
+                        type="button"
+                        (click)="cerrarDetalle()"
+                        aria-label="Cerrar detalle"
+                        class="flex h-9 w-9 shrink-0
+                                   items-center justify-center
+                                   rounded-lg bg-gray-100
+                                   text-xl text-gray-600
+                                   hover:bg-gray-200
+                                   dark:bg-gray-800
+                                   dark:text-white"
+                >
+                    ×
+                </button>
+
+            </div>
+
+            <!-- CONTENIDO DEL MODAL -->
+
+            <div class="overflow-y-auto p-5">
+
+                @if (resumenDetalle; as resumen) {
+
+                <!-- INDICADORES INDIVIDUALES -->
+
+                <div
+                        class="grid grid-cols-2 gap-3
+                                       sm:grid-cols-3"
+                >
+
+                    <div
+                            class="rounded-xl bg-gray-50 p-4
+                                           dark:bg-gray-800"
+                    >
+                        <p class="text-xs text-gray-500">
+                            Esperadas
+                        </p>
+
+                        <p
+                                class="mt-1 text-2xl font-bold
+                                               dark:text-white"
+                        >
+                            {{ resumen.esperadas }}
+                        </p>
+                    </div>
+
+                    <div
+                            class="rounded-xl bg-green-50 p-4
+                                           dark:bg-green-900/20"
+                    >
+                        <p class="text-xs text-green-700">
+                            Completadas
+                        </p>
+
+                        <p
+                                class="mt-1 text-2xl font-bold
+                                               text-green-700"
+                        >
+                            {{ resumen.completadas }}
+                        </p>
+                    </div>
+
+                    <div
+                            class="rounded-xl bg-blue-50 p-4
+                                           dark:bg-blue-900/20"
+                    >
+                        <p class="text-xs text-blue-700">
+                            Cumplimiento
+                        </p>
+
+                        <p
+                                class="mt-1 text-2xl font-bold
+                                               text-blue-700"
+                        >
+                            {{ resumen.cumplimiento }}%
+                        </p>
+                    </div>
+
+                    <div
+                            class="rounded-xl bg-amber-50 p-4
+                                           dark:bg-amber-900/20"
+                    >
+                        <p class="text-xs text-amber-700">
+                            Incompletas
+                        </p>
+
+                        <p
+                                class="mt-1 text-xl font-bold
+                                               text-amber-700"
+                        >
+                            {{ resumen.incompletas }}
+                        </p>
+                    </div>
+
+                    <div
+                            class="rounded-xl bg-red-50 p-4
+                                           dark:bg-red-900/20"
+                    >
+                        <p class="text-xs text-red-700">
+                            Canceladas
+                        </p>
+
+                        <p
+                                class="mt-1 text-xl font-bold
+                                               text-red-700"
+                        >
+                            {{ resumen.canceladas }}
+                        </p>
+                    </div>
+
+                    <div
+                            class="rounded-xl bg-gray-50 p-4
+                                           dark:bg-gray-800"
+                    >
+                        <p class="text-xs text-gray-500">
+                            En proceso / No iniciadas
+                        </p>
+
+                        <p
+                                class="mt-1 text-xl font-bold
+                                               dark:text-white"
+                        >
+                            {{ resumen.enProceso }}
+                            /
+                            {{ resumen.noIniciadas }}
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- GRÁFICA INDIVIDUAL -->
+
+                <div
+                        class="mt-6 rounded-xl border
+                                       border-gray-200 p-4
+                                       dark:border-gray-800"
+                >
+
+                    <h3
+                            class="text-base font-semibold
+                                           text-gray-900 dark:text-white"
+                    >
+                        Evolución individual
+                    </h3>
+
+                    <p
+                            class="mt-1 text-xs
+                                           text-gray-500 dark:text-gray-400"
+                    >
+                        Porcentaje de cumplimiento
+                        por día seleccionado.
+                    </p>
+
+                    <div class="mt-5 space-y-4">
+
+                        @for (
+                        dia of detalleDiarioGrafica;
+                        track dia.fecha
+                        ) {
+
+                        <div>
+
+                            <div
+                                    class="mb-2 flex items-center
+                                                       justify-between gap-3"
+                            >
+
+                                                <span
+                                                        class="text-xs font-medium
+                                                           text-gray-600
+                                                           dark:text-gray-300"
+                                                >
+                                                    {{ dia.fecha }}
+                                                </span>
+
+                                <span
+                                        class="text-xs font-bold
+                                                           text-blue-600"
+                                >
+                                                    {{ dia.completadasParaMeta }}
+                                                    / {{ dia.esperadas }}
+                                                    · {{ dia.cumplimiento }}%
+                                                </span>
+
+                            </div>
+
+                            <div
+                                    class="h-4 overflow-hidden
+                                                       rounded-lg bg-gray-100
+                                                       dark:bg-gray-800"
+                            >
+
+                                <div
+                                        class="h-full rounded-lg
+                                                           bg-blue-600
+                                                           transition-all
+                                                           duration-300"
+                                        [style.width.%]="porcentaje(dia.cumplimiento)"
+                                ></div>
+
+                            </div>
+
+                        </div>
+
+                        } @empty {
+
+                        <p
+                                class="py-6 text-center
+                                                   text-sm text-gray-500"
+                        >
+                            No hay datos diarios
+                            para este período.
+                        </p>
+
+                        }
+
+                    </div>
+
+                </div>
+
+                <!-- DETALLE POR DÍA -->
+
+                <div class="mt-6">
+
+                    <h3
+                            class="mb-3 text-base font-semibold
+                                           text-gray-900 dark:text-white"
+                    >
+                        Desglose diario
+                    </h3>
+
+                    <div class="overflow-x-auto">
+
+                        <table
+                                class="w-full min-w-[650px]
+                                               text-left text-xs"
+                        >
+
+                            <thead
+                                    class="bg-gray-50
+                                                   text-gray-600
+                                                   dark:bg-gray-800
+                                                   dark:text-gray-300"
+                            >
+                            <tr>
+                                <th class="px-3 py-3">Fecha</th>
+                                <th class="px-3 py-3 text-center">Completadas</th>
+                                <th class="px-3 py-3 text-center">Incompletas</th>
+                                <th class="px-3 py-3 text-center">Canceladas</th>
+                                <th class="px-3 py-3 text-center">En proceso</th>
+                                <th class="px-3 py-3 text-center">No iniciadas</th>
+                                <th class="px-3 py-3 text-center">Cumplimiento</th>
+                            </tr>
+                            </thead>
+
+                            <tbody>
+
+                            @for (
+                            dia of detalleDiarioGrafica;
+                            track dia.fecha
+                            ) {
+
+                            <tr
+                                    class="border-b
+                                                           border-gray-100
+                                                           text-gray-700
+                                                           dark:border-gray-800
+                                                           dark:text-gray-300"
+                            >
+
+                                <td class="px-3 py-3">
+                                    {{ dia.fecha }}
+                                </td>
+
+                                <td class="px-3 py-3 text-center">
+                                    {{ dia.completadas }}
+                                </td>
+
+                                <td class="px-3 py-3 text-center">
+                                    {{ dia.incompletas }}
+                                </td>
+
+                                <td class="px-3 py-3 text-center">
+                                    {{ dia.canceladas }}
+                                </td>
+
+                                <td class="px-3 py-3 text-center">
+                                    {{ dia.enProceso }}
+                                </td>
+
+                                <td class="px-3 py-3 text-center">
+                                    {{ dia.noIniciadas }}
+                                </td>
+
+                                <td
+                                        class="px-3 py-3
+                                                               text-center
+                                                               font-semibold"
+                                >
+                                    {{ dia.cumplimiento }}%
+                                </td>
+
+                            </tr>
+
+                            }
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+                }
+
+            </div>
+
+            <!-- PIE DEL MODAL -->
+
+            <div
+                    class="flex justify-end
+                               border-t border-gray-200
+                               p-4 dark:border-gray-800"
+            >
+
+                <button
+                        type="button"
+                        (click)="cerrarDetalle()"
+                        class="rounded-lg bg-blue-600
+                                   px-5 py-2.5 text-sm
+                                   font-medium text-white
+                                   hover:bg-blue-700"
+                >
+                    Cerrar
+                </button>
+
+            </div>
+
+        </section>
+
+    </div>
+
+    }
+
+    }
+
+</div>

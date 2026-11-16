@@ -3,27 +3,19 @@ package com.sst.sst.config;
 
 import com.sst.sst.model.RegistroAcceso;
 import com.sst.sst.model.Usuario;
-
 import com.sst.sst.repository.RegistroAccesoRepository;
 import com.sst.sst.repository.UsuarioRepository;
-
 import com.sst.sst.service.UsuarioDetailsService;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import org.springframework.http.HttpStatus;
-
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-
 import org.springframework.security.web.authentication.logout
         .HttpStatusReturningLogoutSuccessHandler;
 
@@ -79,61 +71,75 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // Recursos públicos
-                        .requestMatchers(
-                                "/",
-                                "/index",
-                                "/login",
-                                "/error",
-                                "/favicon.ico",
-                                "/css/**",
-                                "/js/**",
-                                "/img/**",
-                                "/images/**",
-                                "/assets/**",
-                                "/webjars/**"
-                        ).permitAll()
+                                // Recursos públicos
+                                .requestMatchers(
+                                        "/",
+                                        "/index",
+                                        "/login",
+                                        "/error",
+                                        "/favicon.ico",
+                                        "/css/**",
+                                        "/js/**",
+                                        "/img/**",
+                                        "/images/**",
+                                        "/assets/**",
+                                        "/webjars/**"
+                                ).permitAll()
 
-                        // El login necesita CSRF antes de autenticarse.
-                        .requestMatchers(
-                                "/api/auth/csrf"
-                        ).permitAll()
 
-                        // Vistas administrativas existentes
-                        .requestMatchers(
-                                "/usuarios/**",
-                                "/actividades/rrhh",
-                                "/actividades/reportes",
-                                "/actividades/descargar",
-                                "/actividades/api/pendientes-hoy"
-                        ).hasRole("RRHH")
+// Token CSRF disponible antes del inicio de sesión
+                                .requestMatchers(
+                                        "/api/auth/csrf"
+                                ).permitAll()
 
-                        // Dashboard y API de RRHH
-                        .requestMatchers(
-                                "/api/rrhh/**"
-                        ).hasRole("RRHH")
+// Consultar el usuario que inició sesión
+                                .requestMatchers(
+                                        "/api/auth/me"
+                                ).authenticated()
 
-                        // Sesión para Angular
-                        .requestMatchers(
-                                "/api/auth/me"
-                        ).authenticated()
+                                // Vistas administrativas existentes
+                                .requestMatchers(
+                                        "/usuarios/**",
+                                        "/actividades/rrhh",
+                                        "/actividades/reportes",
+                                        "/actividades/descargar",
+                                        "/actividades/api/pendientes-hoy"
+                                ).hasRole("RRHH")
 
-                        // Resumen personal, también para RRHH
-                        .requestMatchers(
-                                "/api/empleado/**"
-                        ).hasAnyRole("EMPLEADO", "RRHH")
 
-                        // Notificaciones
-                        .requestMatchers(
-                                "/api/notificaciones/**"
-                        ).hasAnyRole("EMPLEADO", "RRHH")
+// Perfil personal de RRHH
+                                .requestMatchers(
+                                        "/api/rrhh/perfil",
+                                        "/api/rrhh/perfil/**"
+                                ).hasRole("RRHH")
 
-                        // Bloquear otras API
-                        .requestMatchers(
-                                "/api/**"
-                        ).denyAll()
+// Perfil personal de EMPLEADO
+                                .requestMatchers(
+                                        "/api/empleado/perfil",
+                                        "/api/empleado/perfil/**"
+                                ).hasRole("EMPLEADO")
 
-                        .anyRequest().authenticated()
+// Resto de funcionalidades de RRHH
+                                .requestMatchers(
+                                        "/api/rrhh/**"
+                                ).hasRole("RRHH")
+
+// Resumen y temporizador personal compartidos
+                                .requestMatchers(
+                                        "/api/empleado/**"
+                                ).hasAnyRole("EMPLEADO", "RRHH")
+
+// Notificaciones compartidas
+                                .requestMatchers(
+                                        "/api/notificaciones/**"
+                                ).hasAnyRole("EMPLEADO", "RRHH")
+
+// Otras API no autorizadas
+                                .requestMatchers(
+                                        "/api/**"
+                                ).denyAll()
+
+                                .anyRequest().authenticated()
                 )
 
                 .formLogin(form -> form

@@ -1,345 +1,259 @@
+import {CommonModule} from '@angular/common';
+import {Component, OnInit} from '@angular/core';
+import {Router, RouterModule} from '@angular/router';
+import {take} from 'rxjs';
+import {SidebarService} from '../../../core/services/sidebar.service';
+import {RolUsuarioService} from '../../../core/services/rol-usuario.service';
+import {NgIcon, provideIcons} from "@ng-icons/core";
+import {heroCalendarDays, heroChartBar, heroHome, heroUsers} from "@ng-icons/heroicons/outline";
 
-import { CommonModule } from '@angular/common';
-
-import {
-  ChangeDetectorRef,
-  Component,
-  ElementRef,
-  QueryList,
-  ViewChildren
-} from '@angular/core';
-
-import {
-  NavigationEnd,
-  Router,
-  RouterModule
-} from '@angular/router';
-
-import {
-  combineLatest,
-  Subscription
-} from 'rxjs';
-
-import { SafeHtmlPipe } from '../../../shared/pipe/safe-html.pipe';
-
-import { SidebarService } from '../../../core/services/sidebar.service';
-
-import { SidebarWidgetComponent } from './app-sidebar-widget.component';
-
-import { ButtonComponent } from '../../../shared/components/ui/button/button.component';
-
-// =============================================
-// MODELO DE NAVEGACIÓN
-// =============================================
-
-type NavItem = {
-  name: string;
-  icon: string;
-  path?: string;
-  new?: boolean;
-  subItems?: {
+interface MenuItem {
     name: string;
     path: string;
-    pro?: boolean;
-    new?: boolean;
-  }[];
-};
+    icon: string;
+}
 
 @Component({
-  selector: 'app-sidebar',
-  imports: [
-    ButtonComponent,
-    CommonModule,
-    RouterModule,
-    SafeHtmlPipe,
-    SidebarWidgetComponent
-  ],
-  templateUrl: './app-sidebar.component.html'
-})
-export class AppSidebarComponent {
+    selector: 'app-sidebar',
+    standalone: true,
 
-  // =============================================
-  // ICONOS DE SST DIGITAL
-  // =============================================
+    imports: [
+        CommonModule,
+        RouterModule,
+        NgIcon
+    ],
 
-  private readonly iconoPanel = `
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="1em"
-      height="1em"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.8"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      <rect x="3" y="3" width="7" height="7" rx="1"/>
-      <rect x="14" y="3" width="7" height="7" rx="1"/>
-      <rect x="3" y="14" width="7" height="7" rx="1"/>
-      <rect x="14" y="14" width="7" height="7" rx="1"/>
-    </svg>
-  `;
-
-  // =============================================
-  // MENÚ PRINCIPAL DE SST DIGITAL
-  // =============================================
-
-  navItems: NavItem[] = [
-    {
-      name: 'SST Digital',
-      icon: this.iconoPanel,
-      subItems: [
-        {
-          name: 'Panel del empleado',
-          path: '/sst/empleado'
-        }
-      ]
-    }
-  ];
-
-  // Dejamos vacía la sección de demostración.
-  // Más adelante incorporaremos opciones reales
-  // para RRHH, historial y pausas activas.
-  othersItems: NavItem[] = [];
-
-  // =============================================
-  // ESTADO DE LOS SUBMENÚS
-  // =============================================
-
-  openSubmenu: string | null | number = null;
-
-  subMenuHeights: {
-    [key: string]: number
-  } = {};
-
-  @ViewChildren('subMenu')
-  subMenuRefs!: QueryList<ElementRef>;
-
-  readonly isExpanded$;
-  readonly isMobileOpen$;
-  readonly isHovered$;
-
-  private subscription: Subscription = new Subscription();
-
-  // =============================================
-  // CONSTRUCTOR
-  // =============================================
-
-  constructor(
-      public sidebarService: SidebarService,
-      private router: Router,
-      private cdr: ChangeDetectorRef
-  ) {
-    this.isExpanded$ = this.sidebarService.isExpanded$;
-    this.isMobileOpen$ = this.sidebarService.isMobileOpen$;
-    this.isHovered$ = this.sidebarService.isHovered$;
-  }
-
-  // =============================================
-  // INICIALIZACIÓN
-  // =============================================
-
-  ngOnInit(): void {
-
-    this.subscription.add(
-        this.router.events.subscribe(event => {
-
-          if (event instanceof NavigationEnd) {
-            this.setActiveMenuFromRoute(this.router.url);
-          }
-
+    providers: [
+        provideIcons({
+            heroHome,
+            heroCalendarDays,
+            heroUsers,
+            heroChartBar
         })
-    );
+    ],
 
-    this.subscription.add(
-        combineLatest([
-          this.isExpanded$,
-          this.isMobileOpen$,
-          this.isHovered$
-        ]).subscribe(
-            ([isExpanded, isMobileOpen, isHovered]) => {
+    templateUrl: './app-sidebar.component.html'
+})
 
-              if (
-                  !isExpanded &&
-                  !isMobileOpen &&
-                  !isHovered
-              ) {
-                this.cdr.detectChanges();
-              }
+export class AppSidebarComponent implements OnInit {
 
-            }
-        )
-    );
 
-    this.setActiveMenuFromRoute(this.router.url);
-  }
+// ======================================
+// MENÚ DEL EMPLEADO
+// ======================================
 
-  // =============================================
-  // LIMPIEZA DE SUSCRIPCIONES
-  // =============================================
-
-  ngOnDestroy(): void {
-    this.subscription.unsubscribe();
-  }
-
-  // =============================================
-  // VERIFICAR RUTA ACTIVA
-  // =============================================
-
-  isActive(path: string): boolean {
-    return (
-        this.router.url === path ||
-        this.router.url.startsWith(path + '?')
-    );
-  }
-
-  isItemActive(
-      nav: NavItem,
-      section: string,
-      index: number
-  ): boolean {
-
-    if (nav.subItems?.length) {
-      return (
-          this.openSubmenu === `${section}-${index}` ||
-          nav.subItems.some(
-              sub => this.isActive(sub.path)
-          )
-      );
-    }
-
-    return nav.path
-        ? this.isActive(nav.path)
-        : false;
-  }
-
-  // =============================================
-  // ABRIR Y CERRAR SUBMENÚS
-  // =============================================
-
-  toggleSubmenu(section: string, index: number): void {
-
-    const key = `${section}-${index}`;
-
-    if (this.openSubmenu === key) {
-
-      this.openSubmenu = null;
-      this.subMenuHeights[key] = 0;
-
-    } else {
-
-      this.openSubmenu = key;
-
-      setTimeout(() => {
-
-        const el = document.getElementById(key);
-
-        if (el) {
-          this.subMenuHeights[key] = el.scrollHeight;
-          this.cdr.detectChanges();
+    private readonly menuEmpleado: MenuItem[] = [
+        {
+            name: 'Inicio',
+            path: '/sst/empleado',
+            icon: 'heroHome'
+        },
+        {
+            name: 'Resumen de pausas activas',
+            path: '/sst/empleado/resumen',
+            icon: 'heroCalendarDays'
         }
-
-      });
-    }
-  }
-
-  // =============================================
-  // CONTROL DEL MENÚ LATERAL
-  // =============================================
-
-  onSidebarMouseEnter(): void {
-
-    this.isExpanded$.subscribe(expanded => {
-
-      if (!expanded) {
-        this.sidebarService.setHovered(true);
-      }
-
-    }).unsubscribe();
-  }
-
-  // =============================================
-  // ABRIR MENÚ CORRESPONDIENTE A LA RUTA
-  // =============================================
-
-  private setActiveMenuFromRoute(
-      currentUrl: string
-  ): void {
-
-    const menuGroups = [
-      {
-        items: this.navItems,
-        prefix: 'main'
-      },
-      {
-        items: this.othersItems,
-        prefix: 'others'
-      }
     ];
 
-    menuGroups.forEach(group => {
+// ======================================
+// MENÚ DE RECURSOS HUMANOS
+// ======================================
 
-      group.items.forEach((nav, index) => {
 
-        if (nav.subItems) {
+    private readonly menuRrhh: MenuItem[] = [
+        {
+            name: 'Inicio RR. HH.',
+            path: '/sst/rrhh',
+            icon: 'heroHome'
+        },
+        {
+            name: 'Resumen de pausas activas',
+            path: '/sst/rrhh/resumen',
+            icon: 'heroCalendarDays'
+        },
+        {
+            name: 'Gestión de empleados',
+            path: '/sst/rrhh/empleados',
+            icon: 'heroUsers'
+        },
+        {
+            name: 'Seguimiento de pausas',
+            path: '/sst/rrhh/seguimiento-pausas',
+            icon: 'heroChartBar'
+        }
+    ];
 
-          nav.subItems.forEach(subItem => {
+    // ESTADO DEL MENÚ
 
-            if (
-                currentUrl === subItem.path ||
-                currentUrl.startsWith(subItem.path + '?')
-            ) {
+    navItems: MenuItem[] = [];
 
-              const key = `${group.prefix}-${index}`;
+    rutaInicio = '/sst/empleado';
 
-              this.openSubmenu = key;
+    cargandoMenu = true;
+    errorMenu = '';
 
-              setTimeout(() => {
+    // ESTADO DEL SIDEBAR TAILADMIN
 
-                const el = document.getElementById(key);
+    readonly isExpanded$;
+    readonly isMobileOpen$;
+    readonly isHovered$;
 
-                if (el) {
-                  this.subMenuHeights[key] = el.scrollHeight;
-                  this.cdr.detectChanges();
-                }
+    constructor(
+        public sidebarService: SidebarService,
+        private router: Router,
+        private rolUsuarioService: RolUsuarioService
+    ) {
 
-              });
-            }
+        this.isExpanded$ =
+            this.sidebarService.isExpanded$;
 
-          });
+        this.isMobileOpen$ =
+            this.sidebarService.isMobileOpen$;
+
+        this.isHovered$ =
+            this.sidebarService.isHovered$;
+    }
+
+    // INICIALIZAR MENÚ
+
+    ngOnInit(): void {
+        this.cargarMenu();
+    }
+
+    // CONSULTAR ROL DE USUARIO
+
+
+    cargarMenu(): void {
+
+        this.errorMenu = '';
+
+        // 1. Si el guard ya identificó al usuario,
+        // construir el menú inmediatamente.
+        const usuarioGuardado =
+            this.rolUsuarioService.usuarioActual;
+
+        if (usuarioGuardado?.autenticado) {
+            this.configurarMenu(usuarioGuardado.rol);
+            return;
         }
 
-      });
-    });
-  }
+        // 2. Si todavía no hay información,
+        // esperar la consulta compartida del servicio.
+        this.cargandoMenu = true;
 
-  // =============================================
-  // CERRAR MENÚ EN MÓVILES
-  // =============================================
+        this.rolUsuarioService
+            .obtenerUsuarioActual()
+            .pipe(take(1))
+            .subscribe({
 
-  onSubmenuClick(): void {
+                next: usuario => {
 
-    this.isMobileOpen$.subscribe(isMobile => {
+                    if (!usuario.autenticado) {
+                        this.navItems = [];
+                        this.errorMenu =
+                            'No existe una sesión activa.';
 
-      if (isMobile) {
-        this.sidebarService.setMobileOpen(false);
-      }
+                        this.cargandoMenu = false;
 
-    }).unsubscribe();
-  }
+                        void this.router.navigateByUrl(
+                            '/signin',
+                            {replaceUrl: true}
+                        );
 
-  onSingleMenuClick(): void {
+                        return;
+                    }
 
-    this.openSubmenu = null;
-    this.subMenuHeights = {};
+                    this.configurarMenu(usuario.rol);
+                },
 
-    this.isMobileOpen$.subscribe(isMobile => {
+                error: error => {
 
-      if (isMobile) {
-        this.sidebarService.setMobileOpen(false);
-      }
+                    console.error(
+                        'Error consultando el rol:',
+                        error
+                    );
 
-    }).unsubscribe();
-  }
+                    this.navItems = [];
+                    this.errorMenu =
+                        'No se pudo verificar tu sesión.';
+
+                    this.cargandoMenu = false;
+                }
+            });
+    }
+
+    private configurarMenu(
+        rol: 'EMPLEADO' | 'RRHH'
+    ): void {
+
+        if (rol === 'RRHH') {
+
+            this.navItems = [...this.menuRrhh];
+
+            this.rutaInicio = '/sst/rrhh';
+
+        } else if (rol === 'EMPLEADO') {
+
+            this.navItems = [...this.menuEmpleado];
+
+            this.rutaInicio = '/sst/empleado';
+
+        } else {
+
+            this.navItems = [];
+
+            this.errorMenu =
+                'El usuario no tiene un rol válido.';
+        }
+
+        this.cargandoMenu = false;
+    }
+
+    // RUTA ACTIVA
+
+    isActive(path: string): boolean {
+
+        const rutaActual =
+            this.router.url
+                .split('?')[0]
+                .split('#')[0];
+
+        return rutaActual === path;
+    }
+
+    // EXPANDIR SIDEBAR AL PASAR EL CURSOR
+
+    onSidebarMouseEnter(): void {
+
+        this.isExpanded$
+            .pipe(take(1))
+            .subscribe(expanded => {
+
+                if (!expanded) {
+
+                    this.sidebarService.setHovered(
+                        true
+                    );
+
+                }
+            });
+    }
+
+    // CERRAR MENÚ EN MÓVILES
+
+    onMenuClick(): void {
+
+        this.isMobileOpen$
+            .pipe(take(1))
+            .subscribe(isMobile => {
+
+                if (isMobile) {
+
+                    this.sidebarService.setMobileOpen(
+                        false
+                    );
+
+                }
+            });
+    }
 }

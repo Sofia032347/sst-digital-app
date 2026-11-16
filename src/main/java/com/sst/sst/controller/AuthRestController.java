@@ -1,13 +1,13 @@
 package com.sst.sst.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.security.web.csrf.CsrfToken;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,6 +30,15 @@ public class AuthRestController {
 
         // Obtener el correo desde Spring Security.
         String email = authentication.getName();
+
+        System.out.println(
+                "[AUTH ME] Usuario: " + authentication.getName()
+        );
+
+        System.out.println(
+                "[AUTH ME] Autoridades: " +
+                        authentication.getAuthorities()
+        );
 
         // Comprobar sus permisos.
         boolean esRRHH = authentication.getAuthorities()
