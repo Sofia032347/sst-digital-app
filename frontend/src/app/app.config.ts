@@ -1,22 +1,23 @@
-import {
-  ApplicationConfig,
-  provideZoneChangeDetection
-} from '@angular/core';
+import {ApplicationConfig, provideZoneChangeDetection} from '@angular/core';
 
-import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
+import {provideRouter} from '@angular/router';
 
-import { routes } from './app.routes';
+import {provideHttpClient, withInterceptors} from '@angular/common/http';
+
+import {routes} from './app.routes';
+
+import {apiInterceptor} from './core/interceptors/api.interceptor';
 
 export const appConfig: ApplicationConfig = {
-  providers: [
-    provideZoneChangeDetection({
-      eventCoalescing: true
-    }),
+    providers: [
+        provideZoneChangeDetection({
+            eventCoalescing: true
+        }),
 
-    provideRouter(routes),
+        provideRouter(routes),
 
-    // Habilita y configura las peticiones HTTP
-    provideHttpClient()
-  ]
+        provideHttpClient(
+            withInterceptors([apiInterceptor])
+        )
+    ]
 };

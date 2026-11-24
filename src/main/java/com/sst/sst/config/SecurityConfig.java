@@ -1,4 +1,3 @@
-
 package com.sst.sst.config;
 
 import com.sst.sst.model.RegistroAcceso;
@@ -16,10 +15,14 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.logout
-        .HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Configuration
 public class SecurityConfig {
@@ -35,11 +38,74 @@ public class SecurityConfig {
         this.registroAccesoRepository = registroAccesoRepository;
     }
 
+    // ==========================================
+    // CONFIGURACIÓN CORS PARA ANGULAR Y RENDER
+    // ==========================================
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        List<String> origins = new ArrayList<>();
+
+        // Desarrollo local de Angular
+        origins.add("http://localhost:4200");
+
+        // Frontend publicado en Render
+        String frontendUrl = System.getenv("FRONTEND_URL");
+
+        if (frontendUrl != null && !frontendUrl.isBlank()) {
+            origins.add(frontendUrl.trim());
+        }
+
+        configuration.setAllowedOrigins(origins);
+
+        configuration.setAllowedMethods(
+                List.of(
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "PATCH",
+                        "DELETE",
+                        "OPTIONS"
+                )
+        );
+
+        configuration.setAllowedHeaders(
+                List.of(
+                        "Authorization",
+                        "Content-Type",
+                        "Accept",
+                        "X-Requested-With",
+                        "X-CSRF-TOKEN",
+                        "X-XSRF-TOKEN"
+                )
+        );
+
+        // Necesario para enviar y recibir cookies de sesión
+        configuration.setAllowCredentials(true);
+
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
+    }
+
+    // ==========================================
+    // PROVEEDOR DE AUTENTICACIÓN
+    // ==========================================
+
     @Bean
     public AuthenticationProvider authenticationProvider(
             UsuarioDetailsService usuarioDetailsService,
             PasswordEncoder passwordEncoder
     ) {
+
         DaoAuthenticationProvider provider =
                 new DaoAuthenticationProvider(usuarioDetailsService);
 
@@ -48,9 +114,14 @@ public class SecurityConfig {
         return provider;
     }
 
+    // ==========================================
+    // IDENTIFICAR PETICIONES DE ANGULAR
+    // ==========================================
+
     private boolean esPeticionAngular(
             HttpServletRequest request
     ) {
+
         String accept = request.getHeader("Accept");
         String requestedWith = request.getHeader("X-Requested-With");
 
@@ -60,6 +131,10 @@ public class SecurityConfig {
         ) || "XMLHttpRequest".equalsIgnoreCase(requestedWith);
     }
 
+    // ==========================================
+    // CONFIGURACIÓN DE SEGURIDAD
+    // ==========================================
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
@@ -67,80 +142,93 @@ public class SecurityConfig {
     ) throws Exception {
 
         http
+
+                // Habilitar CORS para el frontend Angular
+                .cors(cors ->
+                        cors.configurationSource(corsConfigurationSource())
+                )
+
                 .authenticationProvider(authenticationProvider)
+
+                // ==================================
+                // AUTORIZACIÓN DE RUTAS
+                // ==================================
 
                 .authorizeHttpRequests(auth -> auth
 
-                                // Recursos públicos
-                                .requestMatchers(
-                                        "/",
-                                        "/index",
-                                        "/login",
-                                        "/error",
-                                        "/favicon.ico",
-                                        "/css/**",
-                                        "/js/**",
-                                        "/img/**",
-                                        "/images/**",
-                                        "/assets/**",
-                                        "/webjars/**"
-                                ).permitAll()
+                        // Recursos públicos
+                        .requestMatchers(
+                                "/",
+                                "/index",
+                                "/login",
+                                "/error",
+                                "/favicon.ico",
+                                "/css/**",
+                                "/js/**",
+                                "/img/**",
+                                "/images/**",
+                                "/assets/**",
+                                "/webjars/**"
+                        ).permitAll()
 
+                        // Token CSRF disponible antes del inicio de sesión
+                        .requestMatchers(
+                                "/api/auth/csrf",
+                                "/actividades/csrf"
+                        ).permitAll()
 
-// Token CSRF disponible antes del inicio de sesión
-                                .requestMatchers(
-                                        "/api/auth/csrf"
-                                ).permitAll()
+                        // Consultar el usuario que inició sesión
+                        .requestMatchers(
+                                "/api/auth/me"
+                        ).authenticated()
 
-// Consultar el usuario que inició sesión
-                                .requestMatchers(
-                                        "/api/auth/me"
-                                ).authenticated()
+                        // Vistas administrativas existentes
+                        .requestMatchers(
+                                "/usuarios/**",
+                                "/actividades/rrhh",
+                                "/actividades/reportes",
+                                "/actividades/descargar",
+                                "/actividades/api/pendientes-hoy"
+                        ).hasRole("RRHH")
 
-                                // Vistas administrativas existentes
-                                .requestMatchers(
-                                        "/usuarios/**",
-                                        "/actividades/rrhh",
-                                        "/actividades/reportes",
-                                        "/actividades/descargar",
-                                        "/actividades/api/pendientes-hoy"
-                                ).hasRole("RRHH")
+                        // Perfil personal de RRHH
+                        .requestMatchers(
+                                "/api/rrhh/perfil",
+                                "/api/rrhh/perfil/**"
+                        ).hasRole("RRHH")
 
+                        // Perfil personal de EMPLEADO
+                        .requestMatchers(
+                                "/api/empleado/perfil",
+                                "/api/empleado/perfil/**"
+                        ).hasRole("EMPLEADO")
 
-// Perfil personal de RRHH
-                                .requestMatchers(
-                                        "/api/rrhh/perfil",
-                                        "/api/rrhh/perfil/**"
-                                ).hasRole("RRHH")
+                        // Resto de funcionalidades de RRHH
+                        .requestMatchers(
+                                "/api/rrhh/**"
+                        ).hasRole("RRHH")
 
-// Perfil personal de EMPLEADO
-                                .requestMatchers(
-                                        "/api/empleado/perfil",
-                                        "/api/empleado/perfil/**"
-                                ).hasRole("EMPLEADO")
+                        // Resumen y temporizador personal compartidos
+                        .requestMatchers(
+                                "/api/empleado/**"
+                        ).hasAnyRole("EMPLEADO", "RRHH")
 
-// Resto de funcionalidades de RRHH
-                                .requestMatchers(
-                                        "/api/rrhh/**"
-                                ).hasRole("RRHH")
+                        // Notificaciones compartidas
+                        .requestMatchers(
+                                "/api/notificaciones/**"
+                        ).hasAnyRole("EMPLEADO", "RRHH")
 
-// Resumen y temporizador personal compartidos
-                                .requestMatchers(
-                                        "/api/empleado/**"
-                                ).hasAnyRole("EMPLEADO", "RRHH")
+                        // Otras API no autorizadas
+                        .requestMatchers(
+                                "/api/**"
+                        ).denyAll()
 
-// Notificaciones compartidas
-                                .requestMatchers(
-                                        "/api/notificaciones/**"
-                                ).hasAnyRole("EMPLEADO", "RRHH")
-
-// Otras API no autorizadas
-                                .requestMatchers(
-                                        "/api/**"
-                                ).denyAll()
-
-                                .anyRequest().authenticated()
+                        .anyRequest().authenticated()
                 )
+
+                // ==================================
+                // INICIO DE SESIÓN
+                // ==================================
 
                 .formLogin(form -> form
 
@@ -172,7 +260,8 @@ public class SecurityConfig {
                             );
                             usuarioSesion.setRol(usuario.getRol());
 
-                            HttpSession session = request.getSession(true);
+                            HttpSession session =
+                                    request.getSession(true);
 
                             session.setAttribute(
                                     "usuarioLogueado",
@@ -186,19 +275,18 @@ public class SecurityConfig {
                                     ahora
                             );
 
-                            // ====================================
-                            // NUEVO: REGISTRAR LOGIN EXITOSO
-                            // ====================================
-
+                            // Registrar login exitoso
                             registroAccesoRepository.save(
                                     new RegistroAcceso(usuario, ahora)
                             );
 
                             // Angular recibe confirmación sin HTML.
                             if (esPeticionAngular(request)) {
+
                                 response.setStatus(
                                         HttpStatus.NO_CONTENT.value()
                                 );
+
                                 return;
                             }
 
@@ -222,6 +310,7 @@ public class SecurityConfig {
                         .failureHandler((request, response, exception) -> {
 
                             if (esPeticionAngular(request)) {
+
                                 response.setStatus(
                                         HttpStatus.UNAUTHORIZED.value()
                                 );
@@ -245,7 +334,12 @@ public class SecurityConfig {
                         .permitAll()
                 )
 
+                // ==================================
+                // CIERRE DE SESIÓN
+                // ==================================
+
                 .logout(logout -> logout
+
                         .logoutUrl("/logout")
 
                         .logoutSuccessHandler(
@@ -260,7 +354,12 @@ public class SecurityConfig {
                         .permitAll()
                 )
 
+                // ==================================
+                // ADMINISTRACIÓN DE SESIONES
+                // ==================================
+
                 .sessionManagement(session -> session
+
                         .sessionFixation(fixation ->
                                 fixation.changeSessionId()
                         )
